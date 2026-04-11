@@ -1,6 +1,6 @@
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/focuszez/public_html/
+    - export DEPLOYPATH=/home/focuszez/public_html/app/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R app $DEPLOYPATH
     - /bin/cp -R config $DEPLOYPATH
