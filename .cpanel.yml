@@ -2,14 +2,13 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/focuszez/public_html/app/
     - /bin/mkdir -p $DEPLOYPATH
-    - /bin/cp -R app $DEPLOYPATH
-    - /bin/cp -R config $DEPLOYPATH
-    - /bin/cp -R database $DEPLOYPATH
-    - /bin/cp -R images $DEPLOYPATH
-    - /bin/cp -R pages $DEPLOYPATH
-    - /bin/cp -R public $DEPLOYPATH
-    - /bin/cp -R routes $DEPLOYPATH
-    - /bin/cp -R storage $DEPLOYPATH
-    - /bin/cp index.php $DEPLOYPATH
-    - /bin/cp .htaccess $DEPLOYPATH
-    - /bin/cp README.md $DEPLOYPATH
+    - /bin/mkdir -p ${DEPLOYPATH}storage/cache
+    - /bin/mkdir -p ${DEPLOYPATH}storage/logs
+    - /bin/cp -ru app $DEPLOYPATH
+    - /bin/cp -ru config $DEPLOYPATH
+    - /bin/cp -ru images $DEPLOYPATH
+    - /bin/cp -ru pages $DEPLOYPATH
+    - /bin/cp -ru public $DEPLOYPATH
+    - /bin/cp -ru routes $DEPLOYPATH
+    - /bin/cp -u *.php $DEPLOYPATH
+    - /bin/cp -u .htaccess $DEPLOYPATH
