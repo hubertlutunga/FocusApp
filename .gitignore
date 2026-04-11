@@ -1,1 +1,42 @@
 .DS_Store
+Thumbs.db
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment and local overrides
+.env
+.env.*
+!.env.example
+config/*.local.php
+config/local.php
+
+# Dependencies
+vendor/
+node_modules/
+
+# Runtime files
+storage/cache/*
+!storage/cache/.gitkeep
+storage/logs/*
+!storage/logs/.gitkeep
+*.log
+*.pid
+*.tmp
+*.temp
+
+# Test and coverage artifacts
+coverage/
+.phpunit.result.cache
+
+# Build and archive artifacts
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# macOS metadata in subdirectories
+**/.DS_Store

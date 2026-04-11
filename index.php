@@ -14,7 +14,9 @@ if (($appConfig['base_url'] ?? '') === '') {
 
 $GLOBALS['config'] = [
     'app' => $appConfig,
-    'database' => require __DIR__ . '/config/database.php',
+    'database' => file_exists(__DIR__ . '/config/database.local.php')
+        ? require __DIR__ . '/config/database.local.php'
+        : require __DIR__ . '/config/database.php',
 ];
 
 require __DIR__ . '/app/Helpers/functions.php';
