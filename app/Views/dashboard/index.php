@@ -196,243 +196,243 @@
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h3 class="h5 mb-1">Évolution des ventes</h3>
-                <p class="text-muted mb-0">Suivi des factures validées dans le temps.</p>
-            </div>
-            <div class="card-body px-4 pb-4">
-                <canvas id="salesChart"
-                        data-labels='<?= e(json_encode($chartLabels, JSON_UNESCAPED_UNICODE)); ?>'
-                        data-values='<?= e(json_encode($chartValues, JSON_UNESCAPED_UNICODE)); ?>'></canvas>
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h3 class="h5 mb-1">Évolution des ventes</h3>
+                        <p class="text-muted mb-0">Suivi des factures validées dans le temps.</p>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <canvas id="salesChart"
+                                data-labels='<?= e(json_encode($chartLabels, JSON_UNESCAPED_UNICODE)); ?>'
+                                data-values='<?= e(json_encode($chartValues, JSON_UNESCAPED_UNICODE)); ?>'></canvas>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-<?php elseif (!empty($isStockDashboard)): ?>
-<?php
-$stockCoverageRate = (float) ($stockOverview['stock_coverage_rate'] ?? 0);
-$stockCoverageState = $stockCoverageRate < 50 ? 'critical' : ($stockCoverageRate < 75 ? 'alert' : 'healthy');
-$stockCoverageLabel = $stockCoverageState === 'critical' ? 'Couverture faible' : ($stockCoverageState === 'alert' ? 'Couverture à surveiller' : 'Couverture maîtrisée');
-$stockCoverageIcon = $stockCoverageState === 'critical' ? 'danger' : ($stockCoverageState === 'alert' ? 'warning' : 'success');
-?>
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-    <div>
-        <h2 class="h4 mb-1">Pilotage du stock</h2>
-        <p class="text-muted mb-0">Vue opérationnelle des niveaux, mouvements et alertes de réapprovisionnement.</p>
-    </div>
-    <div class="d-flex flex-wrap gap-2">
-        <a href="<?= e(url('/stock')); ?>" class="btn btn-outline-primary">Mouvements</a>
-        <a href="<?= e(url('/products')); ?>" class="btn btn-outline-secondary">Produits</a>
-        <a href="<?= e(url('/procurements')); ?>" class="btn btn-primary">Approvisionnements</a>
-    </div>
-</div>
+        <?php elseif (!empty($isStockDashboard)): ?>
+        <?php
+        $stockCoverageRate = (float) ($stockOverview['stock_coverage_rate'] ?? 0);
+        $stockCoverageState = $stockCoverageRate < 50 ? 'critical' : ($stockCoverageRate < 75 ? 'alert' : 'healthy');
+        $stockCoverageLabel = $stockCoverageState === 'critical' ? 'Couverture faible' : ($stockCoverageState === 'alert' ? 'Couverture à surveiller' : 'Couverture maîtrisée');
+        $stockCoverageIcon = $stockCoverageState === 'critical' ? 'danger' : ($stockCoverageState === 'alert' ? 'warning' : 'success');
+        ?>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h2 class="h4 mb-1">Pilotage du stock</h2>
+                <p class="text-muted mb-0">Vue opérationnelle des niveaux, mouvements et alertes de réapprovisionnement.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="<?= e(url('/stock')); ?>" class="btn btn-outline-primary">Mouvements</a>
+                <a href="<?= e(url('/products')); ?>" class="btn btn-outline-secondary">Produits</a>
+                <a href="<?= e(url('/procurements')); ?>" class="btn btn-primary">Approvisionnements</a>
+            </div>
+        </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-6 col-xl-3">
-        <div class="card metric-card h-100 admin-metric-card stock-metric-card">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon primary"><i class="bi bi-boxes"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Valeur stock</p>
-                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($stockOverview['inventory_cost_value'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote">Prix coûtant · Vente estimée : <?= e(number_format((float) ($stockOverview['inventory_sale_value'] ?? 0), 2, ',', ' ')); ?></small>
+        <div class="row g-3 mb-4">
+            <div class="col-md-6 col-xl-3">
+                <div class="card metric-card h-100 admin-metric-card stock-metric-card">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="metric-icon primary"><i class="bi bi-boxes"></i></span>
+                        <div>
+                            <p class="text-muted mb-1">Valeur stock</p>
+                            <h3 class="mb-0 text-amount"><?= e(number_format((float) ($stockOverview['inventory_cost_value'] ?? 0), 2, ',', ' ')); ?></h3>
+                            <small class="metric-subnote">Prix coûtant · Vente estimée : <?= e(number_format((float) ($stockOverview['inventory_sale_value'] ?? 0), 2, ',', ' ')); ?></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card metric-card h-100 admin-metric-card stock-metric-card stock-metric-card-alert">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="metric-icon warning"><i class="bi bi-exclamation-triangle"></i></span>
+                        <div>
+                            <p class="text-muted mb-1">Produits en alerte</p>
+                            <h3 class="mb-0"><?= e((string) ($stockOverview['low_stock_count'] ?? 0)); ?></h3>
+                            <small class="metric-subnote">Ruptures : <?= e((string) ($stockOverview['out_of_stock_count'] ?? 0)); ?></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card metric-card h-100 admin-metric-card stock-metric-card">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="metric-icon success"><i class="bi bi-arrow-down-circle"></i></span>
+                        <div>
+                            <p class="text-muted mb-1">Entrées du mois</p>
+                            <h3 class="mb-0"><?= e(number_format((float) ($stockOverview['monthly_entries'] ?? 0), 2, ',', ' ')); ?></h3>
+                            <small class="metric-subnote">Appro en attente : <?= e((string) ($stockOverview['pending_procurements'] ?? 0)); ?></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card metric-card h-100 admin-metric-card stock-metric-card">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="metric-icon danger"><i class="bi bi-arrow-up-circle"></i></span>
+                        <div>
+                            <p class="text-muted mb-1">Sorties du mois</p>
+                            <h3 class="mb-0"><?= e(number_format((float) ($stockOverview['monthly_exits'] ?? 0), 2, ',', ' ')); ?></h3>
+                            <small class="metric-subnote">Mouvements aujourd’hui : <?= e((string) ($stockOverview['today_movements'] ?? 0)); ?></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card metric-card h-100 admin-metric-card stock-metric-card stock-metric-card-coverage is-<?= e($stockCoverageState); ?>">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="metric-icon <?= e($stockCoverageIcon); ?>"><i class="bi bi-shield-check"></i></span>
+                        <div>
+                            <p class="text-muted mb-1">Couverture stock</p>
+                            <h3 class="mb-0 <?= $stockCoverageState === 'critical' ? 'text-danger' : ($stockCoverageState === 'alert' ? 'text-warning' : 'text-success'); ?>"><?= e(number_format($stockCoverageRate, 0, ',', ' ')); ?>%</h3>
+                            <small class="metric-subnote <?= $stockCoverageState === 'critical' ? 'text-danger' : ($stockCoverageState === 'alert' ? 'text-warning' : 'text-success'); ?>"><?= e($stockCoverageLabel); ?></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card metric-card h-100 admin-metric-card stock-metric-card">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="metric-icon primary"><i class="bi bi-grid-1x2"></i></span>
+                        <div>
+                            <p class="text-muted mb-1">Base stock active</p>
+                            <h3 class="mb-0"><?= e((string) ($stockOverview['active_products'] ?? 0)); ?></h3>
+                            <small class="metric-subnote"><?= e((string) ($stockOverview['categories_covered'] ?? 0)); ?> catégorie(s) couvertes</small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="card metric-card h-100 admin-metric-card stock-metric-card stock-metric-card-alert">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon warning"><i class="bi bi-exclamation-triangle"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Produits en alerte</p>
-                    <h3 class="mb-0"><?= e((string) ($stockOverview['low_stock_count'] ?? 0)); ?></h3>
-                    <small class="metric-subnote">Ruptures : <?= e((string) ($stockOverview['out_of_stock_count'] ?? 0)); ?></small>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="card metric-card h-100 admin-metric-card stock-metric-card">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon success"><i class="bi bi-arrow-down-circle"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Entrées du mois</p>
-                    <h3 class="mb-0"><?= e(number_format((float) ($stockOverview['monthly_entries'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote">Appro en attente : <?= e((string) ($stockOverview['pending_procurements'] ?? 0)); ?></small>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="card metric-card h-100 admin-metric-card stock-metric-card">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon danger"><i class="bi bi-arrow-up-circle"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Sorties du mois</p>
-                    <h3 class="mb-0"><?= e(number_format((float) ($stockOverview['monthly_exits'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote">Mouvements aujourd’hui : <?= e((string) ($stockOverview['today_movements'] ?? 0)); ?></small>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="card metric-card h-100 admin-metric-card stock-metric-card stock-metric-card-coverage is-<?= e($stockCoverageState); ?>">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon <?= e($stockCoverageIcon); ?>"><i class="bi bi-shield-check"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Couverture stock</p>
-                    <h3 class="mb-0 <?= $stockCoverageState === 'critical' ? 'text-danger' : ($stockCoverageState === 'alert' ? 'text-warning' : 'text-success'); ?>"><?= e(number_format($stockCoverageRate, 0, ',', ' ')); ?>%</h3>
-                    <small class="metric-subnote <?= $stockCoverageState === 'critical' ? 'text-danger' : ($stockCoverageState === 'alert' ? 'text-warning' : 'text-success'); ?>"><?= e($stockCoverageLabel); ?></small>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="card metric-card h-100 admin-metric-card stock-metric-card">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon primary"><i class="bi bi-grid-1x2"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Base stock active</p>
-                    <h3 class="mb-0"><?= e((string) ($stockOverview['active_products'] ?? 0)); ?></h3>
-                    <small class="metric-subnote"><?= e((string) ($stockOverview['categories_covered'] ?? 0)); ?> catégorie(s) couvertes</small>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row g-4 mb-4">
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h3 class="h5 mb-1">Flux des mouvements</h3>
-                <p class="text-muted mb-0">Entrées et sorties de stock sur les derniers mois.</p>
+        <div class="row g-4 mb-4">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h3 class="h5 mb-1">Flux des mouvements</h3>
+                        <p class="text-muted mb-0">Entrées et sorties de stock sur les derniers mois.</p>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <div class="chart-wrap admin-chart-wrap">
+                            <canvas id="stockMovementChart"
+                                    data-labels='<?= e(json_encode($stockChartData['movement_labels'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'
+                                    data-entries='<?= e(json_encode($stockChartData['movement_entries'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'
+                                    data-exits='<?= e(json_encode($stockChartData['movement_exits'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body px-4 pb-4">
-                <div class="chart-wrap admin-chart-wrap">
-                    <canvas id="stockMovementChart"
-                            data-labels='<?= e(json_encode($stockChartData['movement_labels'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'
-                            data-entries='<?= e(json_encode($stockChartData['movement_entries'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'
-                            data-exits='<?= e(json_encode($stockChartData['movement_exits'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'></canvas>
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h3 class="h5 mb-1">Santé du stock</h3>
+                        <p class="text-muted mb-0">Répartition des produits sains, faibles et en rupture.</p>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <div class="chart-wrap admin-chart-wrap admin-chart-wrap-sm">
+                            <canvas id="stockHealthManagerChart"
+                                    data-labels='<?= e(json_encode($stockChartData['health_labels'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'
+                                    data-values='<?= e(json_encode($stockChartData['health_values'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h3 class="h5 mb-1">Santé du stock</h3>
-                <p class="text-muted mb-0">Répartition des produits sains, faibles et en rupture.</p>
-            </div>
-            <div class="card-body px-4 pb-4">
-                <div class="chart-wrap admin-chart-wrap admin-chart-wrap-sm">
-                    <canvas id="stockHealthManagerChart"
-                            data-labels='<?= e(json_encode($stockChartData['health_labels'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'
-                            data-values='<?= e(json_encode($stockChartData['health_values'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row g-4 mb-4">
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h3 class="h5 mb-1">Valeur du stock par catégorie</h3>
-                <p class="text-muted mb-0">Catégories qui portent le plus de valeur immobilisée.</p>
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h3 class="h5 mb-1">Valeur du stock par catégorie</h3>
+                        <p class="text-muted mb-0">Catégories qui portent le plus de valeur immobilisée.</p>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <div class="chart-wrap admin-chart-wrap">
+                            <canvas id="stockCategoryValueChart"
+                                    data-labels='<?= e(json_encode($stockChartData['category_labels'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'
+                                    data-values='<?= e(json_encode($stockChartData['category_values'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body px-4 pb-4">
-                <div class="chart-wrap admin-chart-wrap">
-                    <canvas id="stockCategoryValueChart"
-                            data-labels='<?= e(json_encode($stockChartData['category_labels'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'
-                            data-values='<?= e(json_encode($stockChartData['category_values'] ?? [], JSON_UNESCAPED_UNICODE)); ?>'></canvas>
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100 stock-list-card">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h3 class="h5 mb-1">Produits critiques</h3>
+                        <p class="text-muted mb-0">Articles sous seuil minimum ou déjà en rupture.</p>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <?php if (!empty($stockCriticalProducts)): ?>
+                            <div class="stock-critical-list">
+                                <?php foreach ($stockCriticalProducts as $product): ?>
+                                    <?php $isOut = (float) $product['current_stock'] <= 0; ?>
+                                    <div class="stock-critical-item d-flex justify-content-between align-items-start gap-3">
+                                        <div class="min-w-0">
+                                            <div class="fw-semibold"><?= e($product['name']); ?></div>
+                                            <div class="table-cell-meta"><?= e($product['sku']); ?> · <?= e($product['category_name']); ?></div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="fw-semibold <?= $isOut ? 'text-danger' : 'text-warning'; ?>"><?= e(number_format((float) $product['current_stock'], 2, ',', ' ')); ?> <?= e($product['unit_symbol']); ?></div>
+                                            <div class="table-cell-meta">Min : <?= e(number_format((float) $product['minimum_stock'], 2, ',', ' ')); ?></div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="empty-state py-4">
+                                <i class="bi bi-check2-circle"></i>
+                                <div>Aucun produit critique pour le moment.</div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="col-lg-6">
-        <div class="card border-0 shadow-sm h-100 stock-list-card">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h3 class="h5 mb-1">Produits critiques</h3>
-                <p class="text-muted mb-0">Articles sous seuil minimum ou déjà en rupture.</p>
+
+        <div class="card border-0 shadow-sm stock-list-card">
+            <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                <div>
+                    <h3 class="h5 mb-1">Derniers mouvements</h3>
+                    <p class="text-muted mb-0">Trace récente des entrées, sorties et ajustements.</p>
+                </div>
+                <a href="<?= e(url('/stock')); ?>" class="btn btn-sm btn-outline-primary">Voir tout l’historique</a>
             </div>
             <div class="card-body px-4 pb-4">
-                <?php if (!empty($stockCriticalProducts)): ?>
-                    <div class="stock-critical-list">
-                        <?php foreach ($stockCriticalProducts as $product): ?>
-                            <?php $isOut = (float) $product['current_stock'] <= 0; ?>
-                            <div class="stock-critical-item d-flex justify-content-between align-items-start gap-3">
-                                <div class="min-w-0">
-                                    <div class="fw-semibold"><?= e($product['name']); ?></div>
-                                    <div class="table-cell-meta"><?= e($product['sku']); ?> · <?= e($product['category_name']); ?></div>
+                <?php if (!empty($stockRecentMovements)): ?>
+                    <div class="stock-movement-list">
+                        <?php foreach ($stockRecentMovements as $movement): ?>
+                            <?php $isExit = (float) $movement['quantity'] < 0; ?>
+                            <div class="stock-movement-item d-flex justify-content-between align-items-start gap-3">
+                                <div class="d-flex align-items-start gap-3 min-w-0">
+                                    <span class="stock-movement-icon <?= $isExit ? 'is-exit' : 'is-entry'; ?>">
+                                        <i class="bi <?= $isExit ? 'bi-arrow-up-right' : 'bi-arrow-down-left'; ?>"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <div class="fw-semibold"><?= e($movement['product_name']); ?> <span class="text-muted">· <?= e($movement['sku']); ?></span></div>
+                                        <div class="stock-movement-meta">
+                                            <span><?= e((string) ($movement['user_name'] ?: 'Système')); ?></span>
+                                            <span>•</span>
+                                            <span><?= e((string) ($movement['reference_type'] ?: 'manuel')); ?><?= !empty($movement['reference_id']) ? ' #' . e((string) $movement['reference_id']) : ''; ?></span>
+                                            <span>•</span>
+                                            <span><?= e(date('d/m/Y H:i', strtotime((string) $movement['movement_date']))); ?></span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="text-end">
-                                    <div class="fw-semibold <?= $isOut ? 'text-danger' : 'text-warning'; ?>"><?= e(number_format((float) $product['current_stock'], 2, ',', ' ')); ?> <?= e($product['unit_symbol']); ?></div>
-                                    <div class="table-cell-meta">Min : <?= e(number_format((float) $product['minimum_stock'], 2, ',', ' ')); ?></div>
+                                    <div class="fw-semibold <?= $isExit ? 'text-danger' : 'text-success'; ?>"><?= e(number_format(abs((float) $movement['quantity']), 2, ',', ' ')); ?></div>
+                                    <div class="table-cell-meta"><?= e(movement_label($movement['movement_type'] ?? 'manual')); ?></div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 <?php else: ?>
                     <div class="empty-state py-4">
-                        <i class="bi bi-check2-circle"></i>
-                        <div>Aucun produit critique pour le moment.</div>
+                        <i class="bi bi-box-seam"></i>
+                        <div>Aucun mouvement de stock enregistré récemment.</div>
                     </div>
                 <?php endif; ?>
             </div>
         </div>
-    </div>
-</div>
-
-<div class="card border-0 shadow-sm stock-list-card">
-    <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center gap-3 flex-wrap">
-        <div>
-            <h3 class="h5 mb-1">Derniers mouvements</h3>
-            <p class="text-muted mb-0">Trace récente des entrées, sorties et ajustements.</p>
-        </div>
-        <a href="<?= e(url('/stock')); ?>" class="btn btn-sm btn-outline-primary">Voir tout l’historique</a>
-    </div>
-    <div class="card-body px-4 pb-4">
-        <?php if (!empty($stockRecentMovements)): ?>
-            <div class="stock-movement-list">
-                <?php foreach ($stockRecentMovements as $movement): ?>
-                    <?php $isExit = (float) $movement['quantity'] < 0; ?>
-                    <div class="stock-movement-item d-flex justify-content-between align-items-start gap-3">
-                        <div class="d-flex align-items-start gap-3 min-w-0">
-                            <span class="stock-movement-icon <?= $isExit ? 'is-exit' : 'is-entry'; ?>">
-                                <i class="bi <?= $isExit ? 'bi-arrow-up-right' : 'bi-arrow-down-left'; ?>"></i>
-                            </span>
-                            <div class="min-w-0">
-                                <div class="fw-semibold"><?= e($movement['product_name']); ?> <span class="text-muted">· <?= e($movement['sku']); ?></span></div>
-                                <div class="stock-movement-meta">
-                                    <span><?= e((string) ($movement['user_name'] ?: 'Système')); ?></span>
-                                    <span>•</span>
-                                    <span><?= e((string) ($movement['reference_type'] ?: 'manuel')); ?><?= !empty($movement['reference_id']) ? ' #' . e((string) $movement['reference_id']) : ''; ?></span>
-                                    <span>•</span>
-                                    <span><?= e(date('d/m/Y H:i', strtotime((string) $movement['movement_date']))); ?></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <div class="fw-semibold <?= $isExit ? 'text-danger' : 'text-success'; ?>"><?= e(number_format(abs((float) $movement['quantity']), 2, ',', ' ')); ?></div>
-                            <div class="table-cell-meta"><?= e(movement_label($movement['movement_type'] ?? 'manual')); ?></div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php else: ?>
-            <div class="empty-state py-4">
-                <i class="bi bi-box-seam"></i>
-                <div>Aucun mouvement de stock enregistré récemment.</div>
-            </div>
-        <?php endif; ?>
-    </div>
-</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -562,7 +562,7 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon primary"><i class="bi bi-graph-up-arrow"></i></span>
                 <div>
-                    <p class="text-muted mb-1">Ventes du mois</p>
+                    <p class="text-muted mb-1">Ventes</p>
                     <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['month_sales'] ?? 0), 2, ',', ' ')); ?></h3>
                     <small class="metric-subnote">Jour : <?= e(number_format((float) ($adminOverview['today_sales'] ?? 0), 2, ',', ' ')); ?></small>
                 </div>
@@ -572,11 +572,23 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
     <div class="col-md-6 col-xl-3">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon danger"><i class="bi bi-wallet2"></i></span>
+                <span class="metric-icon primary"><i class="bi bi-tools"></i></span>
                 <div>
-                    <p class="text-muted mb-1">Dépenses</p>
-                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['month_expenses'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote">Jour : <?= e(number_format((float) ($adminOverview['today_expenses'] ?? 0), 2, ',', ' ')); ?></small>
+                    <p class="text-muted mb-1">Vente service</p>
+                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_service_sales'] ?? 0), 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote">Cumul mensuel services</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card metric-card h-100 admin-metric-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="metric-icon success"><i class="bi bi-box-seam"></i></span>
+                <div>
+                    <p class="text-muted mb-1">Stock valorisé</p>
+                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['stock_value'] ?? 0), 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote"><?= e((string) ($adminOverview['low_stock_count'] ?? 0)); ?> produit(s) en alerte</small>
                 </div>
             </div>
         </div>
@@ -596,11 +608,23 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
     <div class="col-md-6 col-xl-3">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
+                <span class="metric-icon danger"><i class="bi bi-wallet2"></i></span>
+                <div>
+                    <p class="text-muted mb-1">Dépenses</p>
+                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['month_expenses'] ?? 0), 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote">Jour : <?= e(number_format((float) ($adminOverview['today_expenses'] ?? 0), 2, ',', ' ')); ?></small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card metric-card h-100 admin-metric-card">
+            <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon success"><i class="bi bi-box-seam"></i></span>
                 <div>
-                    <p class="text-muted mb-1">Stock valorisé</p>
-                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['stock_value'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote"><?= e((string) ($adminOverview['low_stock_count'] ?? 0)); ?> produit(s) en alerte</small>
+                    <p class="text-muted mb-1">Vente produit</p>
+                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_product_sales'] ?? 0), 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote">Cumul mensuel produits</small>
                 </div>
             </div>
         </div>
@@ -616,30 +640,6 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
                         <i class="bi <?= $grossProfitPositive ? 'bi-arrow-up-right' : 'bi-arrow-down-right'; ?> me-1"></i>
                         <?= $grossProfitPositive ? 'Marge positive ce mois' : 'Marge sous pression ce mois'; ?>
                     </small>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="card metric-card h-100 admin-metric-card">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon primary"><i class="bi bi-tools"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Total vente service</p>
-                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_service_sales'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote">Cumul mensuel services</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="card metric-card h-100 admin-metric-card">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon success"><i class="bi bi-box-seam"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Vente produit</p>
-                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_product_sales'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote">Cumul mensuel produits</small>
                 </div>
             </div>
         </div>
