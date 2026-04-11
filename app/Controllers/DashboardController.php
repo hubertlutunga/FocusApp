@@ -11,6 +11,7 @@ use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\Report;
 use App\Models\StockMovement;
+use PDOException;
 
 final class DashboardController extends Controller
 {
@@ -119,7 +120,17 @@ final class DashboardController extends Controller
             $grossProfitEstimate = $monthSales - $monthExpenses;
             $monthlyProductSales = (float) $db->query("SELECT COALESCE(SUM(ii.line_total), 0) FROM invoice_items ii INNER JOIN invoices i ON i.id = ii.invoice_id WHERE i.deleted_at IS NULL AND i.status IN ('validated', 'partial_paid', 'paid') AND ii.item_type = 'product' AND YEAR(i.invoice_date) = YEAR(CURDATE()) AND MONTH(i.invoice_date) = MONTH(CURDATE())")->fetchColumn();
             $monthlyServiceSales = (float) $db->query("SELECT COALESCE(SUM(ii.line_total), 0) FROM invoice_items ii INNER JOIN invoices i ON i.id = ii.invoice_id WHERE i.deleted_at IS NULL AND i.status IN ('validated', 'partial_paid', 'paid') AND ii.item_type = 'service' AND YEAR(i.invoice_date) = YEAR(CURDATE()) AND MONTH(i.invoice_date) = MONTH(CURDATE())")->fetchColumn();
-            $monthlyClients = (int) $db->query("SELECT COUNT(DISTINCT client_id) FROM invoices WHERE deleted_at IS NULL AND status IN ('validated', 'partial_paid', 'paid') AND YEAR(invoice_date) = YEAR(CURDATE()) AND MONTH(invoice_date) = MONTH(CURDATE())")->fetchColumn();
+            try {
+                $supplierDebt = (float) $db->query("SELECT COALESCE(SUM(balance_due), 0) FROM procurements WHERE deleted_at IS NULL AND payment_status IN ('unpaid', 'partial_paid')")->fetchColumn();
+            } catch (PDOException) {
+                $supplierDebt = 0.0;
+            }
+
+            try {
+                $expenseDebt = (float) $db->query("SELECT COALESCE(SUM(balance_due), 0) FROM expenses WHERE deleted_at IS NULL AND payment_status IN ('unpaid', 'partial_paid')")->fetchColumn();
+            } catch (PDOException) {
+                $expenseDebt = 0.0;
+            }
             $outstandingCount = (int) $db->query("SELECT COUNT(*) FROM invoices WHERE deleted_at IS NULL AND status IN ('validated', 'partial_paid') AND balance_due > 0")->fetchColumn();
             $lowStockCount = count($lowStockProducts);
             $activeProducts = (int) $db->query("SELECT COUNT(*) FROM products WHERE deleted_at IS NULL AND is_active = 1")->fetchColumn();
@@ -164,7 +175,7 @@ final class DashboardController extends Controller
                 'gross_profit_estimate' => $grossProfitEstimate,
                 'monthly_product_sales' => $monthlyProductSales,
                 'monthly_service_sales' => $monthlyServiceSales,
-                'monthly_clients' => $monthlyClients,
+                'focus_debt_total' => $supplierDebt + $expenseDebt,
                 'outstanding_total' => (float) ($overview['outstanding_total'] ?? 0),
                 'outstanding_count' => $outstandingCount,
                 'stock_value' => (float) $stats['stock_value'],

@@ -10,6 +10,7 @@ use App\Core\Session;
 use App\Models\ActivityLog;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\ExpensePayment;
 use App\Models\NumberSequence;
 use App\Models\Supplier;
 use Throwable;
@@ -47,17 +48,40 @@ final class ExpenseController extends Controller
             $this->redirect('/expenses/create');
         }
 
+        if ($payload['payment_method'] === 'credit' && !$payload['supplier_id']) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Tiers requis', 'text' => 'Veuillez sélectionner le tiers ou fournisseur pour une dépense à crédit.']);
+            $this->redirect('/expenses/create');
+        }
+
         try {
             $payload['expense_number'] = (new NumberSequence())->next('expense');
-            (new Expense())->create($payload);
+            $payload['payment_number'] = $payload['payment_method'] === 'credit' ? null : (new NumberSequence())->next('expense_payment');
+            $expenseId = (new Expense())->create($payload);
             (new ActivityLog())->log('create', 'Création de la dépense ' . $payload['expense_number'], 'depenses', Auth::id());
             Session::forget('old_input');
             Session::flash('alert', ['icon' => 'success', 'title' => 'Dépense enregistrée', 'text' => 'La dépense a été enregistrée avec succès.']);
-            $this->redirect('/expenses');
+            $this->redirect('/expenses/show?id=' . $expenseId);
         } catch (Throwable $throwable) {
             Session::flash('alert', ['icon' => 'error', 'title' => 'Création impossible', 'text' => 'Impossible d’enregistrer cette dépense.']);
             $this->redirect('/expenses/create');
         }
+    }
+
+    public function show(): void
+    {
+        $id = (int) ($_GET['id'] ?? 0);
+        $expense = (new Expense())->find($id);
+
+        if (!$expense) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Dépense introuvable', 'text' => 'La dépense demandée n’existe pas.']);
+            $this->redirect('/expenses');
+        }
+
+        $this->render('expenses.show', [
+            'pageTitle' => 'Détail dépense',
+            'expense' => $expense,
+            'payments' => (new ExpensePayment())->byExpense($id),
+        ]);
     }
 
     public function edit(): void
@@ -97,11 +121,43 @@ final class ExpenseController extends Controller
             (new ActivityLog())->log('update', 'Mise à jour de la dépense #' . $id, 'depenses', Auth::id());
             Session::forget('old_input');
             Session::flash('alert', ['icon' => 'success', 'title' => 'Dépense mise à jour', 'text' => 'La dépense a été modifiée avec succès.']);
-            $this->redirect('/expenses');
+            $this->redirect('/expenses/show?id=' . $id);
         } catch (Throwable $throwable) {
-            Session::flash('alert', ['icon' => 'error', 'title' => 'Mise à jour impossible', 'text' => 'Impossible de mettre à jour cette dépense.']);
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Mise à jour impossible', 'text' => $throwable->getMessage() ?: 'Impossible de mettre à jour cette dépense.']);
             $this->redirect('/expenses/edit?id=' . $id);
         }
+    }
+
+    public function pay(): void
+    {
+        verify_csrf();
+
+        $expenseId = (int) ($_POST['expense_id'] ?? 0);
+        if ($expenseId <= 0) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Dette introuvable', 'text' => 'Identifiant de dépense invalide.']);
+            $this->redirect('/expenses');
+        }
+
+        $payload = [
+            'expense_id' => $expenseId,
+            'payment_number' => (new NumberSequence())->next('expense_payment'),
+            'payment_date' => (string) ($_POST['payment_date'] ?? date('Y-m-d')),
+            'amount' => (float) ($_POST['amount'] ?? 0),
+            'method' => (string) ($_POST['method'] ?? 'cash'),
+            'reference' => trim((string) ($_POST['reference'] ?? '')),
+            'notes' => trim((string) ($_POST['notes'] ?? '')),
+            'recorded_by' => (int) (Auth::id() ?? 0),
+        ];
+
+        try {
+            (new ExpensePayment())->createForExpense($payload);
+            (new ActivityLog())->log('pay', 'Règlement de la dette sur la dépense #' . $expenseId, 'depenses', Auth::id());
+            Session::flash('alert', ['icon' => 'success', 'title' => 'Règlement enregistré', 'text' => 'Le paiement de cette dette a été enregistré.']);
+        } catch (Throwable $throwable) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Règlement impossible', 'text' => $throwable->getMessage() ?: 'Impossible d’enregistrer ce règlement.']);
+        }
+
+        $this->redirect('/expenses/show?id=' . $expenseId);
     }
 
     public function delete(): void

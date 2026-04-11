@@ -5,6 +5,7 @@ if ($oldItems === []) {
 }
 $selectedSupplier = (int) old('supplier_id', '0');
 $statusValue = old('status', 'draft');
+$paymentMethodValue = old('payment_method', 'cash');
 ?>
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
@@ -40,6 +41,18 @@ $statusValue = old('status', 'draft');
                     <option value="draft" <?= $statusValue === 'draft' ? 'selected' : ''; ?>>Brouillon</option>
                     <option value="ordered" <?= $statusValue === 'ordered' ? 'selected' : ''; ?>>Commandé</option>
                     <option value="received" <?= $statusValue === 'received' ? 'selected' : ''; ?>>Reçu immédiatement</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="payment_method">Mode de règlement</label>
+                <select class="form-select" id="payment_method" name="payment_method">
+                    <option value="cash" <?= $paymentMethodValue === 'cash' ? 'selected' : ''; ?>>Espèces</option>
+                    <option value="bank_transfer" <?= in_array($paymentMethodValue, ['bank', 'bank_transfer'], true) ? 'selected' : ''; ?>>Banque</option>
+                    <option value="mobile_money" <?= $paymentMethodValue === 'mobile_money' ? 'selected' : ''; ?>>Mobile Money</option>
+                    <option value="card" <?= $paymentMethodValue === 'card' ? 'selected' : ''; ?>>Carte</option>
+                    <option value="cheque" <?= $paymentMethodValue === 'cheque' ? 'selected' : ''; ?>>Chèque</option>
+                    <option value="other" <?= $paymentMethodValue === 'other' ? 'selected' : ''; ?>>Autre</option>
+                    <option value="credit" <?= $paymentMethodValue === 'credit' ? 'selected' : ''; ?>>À crédit</option>
                 </select>
             </div>
             <div class="col-md-8">

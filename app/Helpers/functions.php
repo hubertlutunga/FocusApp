@@ -215,6 +215,7 @@ if (!function_exists('status_badge_class')) {
             'draft' => 'badge-status badge-status-draft',
             'validated', 'approved', 'received', 'paid', 'active' => 'badge-status badge-status-success',
             'partial_paid', 'sent', 'ordered' => 'badge-status badge-status-warning',
+            'unpaid' => 'badge-status badge-status-danger',
             'cancelled', 'inactive' => 'badge-status badge-status-danger',
             'converted' => 'badge-status badge-status-primary',
             default => 'badge-status badge-status-default',
@@ -229,6 +230,7 @@ if (!function_exists('status_label')) {
             'draft' => 'Brouillon',
             'validated' => 'Validée',
             'partial_paid' => 'Partiellement payée',
+            'unpaid' => 'Non réglée',
             'paid' => 'Payée',
             'cancelled' => 'Annulée',
             'sent' => 'Envoyé',
@@ -276,6 +278,7 @@ if (!function_exists('payment_method_badge_class')) {
             'bank', 'bank_transfer' => 'badge-payment badge-payment-bank',
             'card' => 'badge-payment badge-payment-card',
             'cheque' => 'badge-payment badge-payment-cheque',
+            'credit' => 'badge-payment badge-payment-warning',
             'other' => 'badge-payment badge-payment-other',
             default => 'badge-payment badge-payment-default',
         };
@@ -292,6 +295,7 @@ if (!function_exists('payment_method_label')) {
             'bank_transfer' => 'Virement',
             'card' => 'Carte',
             'cheque' => 'Chèque',
+            'credit' => 'À crédit',
             'other' => 'Autre',
             default => ucfirst(str_replace('_', ' ', trim((string) $method))),
         };

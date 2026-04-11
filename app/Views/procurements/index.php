@@ -13,6 +13,7 @@
                     <tr>
                         <th>Approvisionnement</th>
                         <th>Statut</th>
+                        <th data-mobile-hidden="true">Paiement</th>
                         <th data-mobile-hidden="true">Total</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -26,9 +27,11 @@
                                     <div class="table-cell-meta"><?= e($procurement['supplier_name']); ?></div>
                                     <div class="table-cell-meta">Date : <?= e(date('d/m/Y', strtotime((string) $procurement['procurement_date']))); ?></div>
                                     <div class="table-cell-meta">Par <?= e($procurement['user_name']); ?></div>
+                                    <div class="table-cell-meta">Payé : <?= e(number_format((float) ($procurement['amount_paid'] ?? 0), 2, ',', ' ')); ?> • Solde : <?= e(number_format((float) ($procurement['balance_due'] ?? 0), 2, ',', ' ')); ?></div>
                                 </div>
                             </td>
                             <td><span class="badge <?= e(status_badge_class($procurement['status'])); ?>"><?= e(status_label($procurement['status'])); ?></span></td>
+                            <td><span class="badge <?= e(status_badge_class($procurement['payment_status'] ?? 'paid')); ?>"><?= e(status_label($procurement['payment_status'] ?? 'paid')); ?></span></td>
                             <td><?= e(number_format((float) $procurement['grand_total'], 2, ',', ' ')); ?></td>
                             <td class="text-end">
                                 <div class="table-actions">

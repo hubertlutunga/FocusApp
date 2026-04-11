@@ -21,7 +21,7 @@ $adminPaths = ['/users', '/users/create', '/users/edit', '/settings/company', '/
 $referencePaths = ['/clients', '/clients/create', '/clients/edit', '/suppliers', '/suppliers/create', '/suppliers/edit', '/categories', '/categories/create', '/categories/edit', '/units', '/units/create', '/units/edit'];
 $stockPaths = ['/products', '/products/create', '/products/edit', '/services', '/services/create', '/services/edit', '/stock', '/procurements', '/procurements/create', '/procurements/show'];
 $commercialPaths = ['/quotes', '/quotes/create', '/quotes/show', '/invoices', '/invoices/create', '/invoices/show', '/payments', '/payments/create'];
-$pilotagePaths = ['/expenses', '/expenses/create', '/expenses/edit', '/reports'];
+$pilotagePaths = ['/expenses', '/expenses/create', '/expenses/show', '/expenses/edit', '/reports'];
 
 $adminOpen = $matchesGroup($adminPaths);
 $referenceOpen = $matchesGroup($referencePaths);
@@ -123,7 +123,7 @@ $canAccessStock = user_can_access_stock_management();
             </button>
             <div class="collapse <?= $pilotageOpen ? 'show' : '' ?>" id="sidebar-pilotage">
                 <div class="sidebar-subnav">
-                    <a class="nav-link <?= is_active_path(['/expenses','/expenses/create','/expenses/edit']); ?>" href="<?= e(url('/expenses')); ?>"><i class="bi bi-wallet2"></i><span>Dépenses</span></a>
+                    <a class="nav-link <?= is_active_path(['/expenses','/expenses/create','/expenses/show','/expenses/edit']); ?>" href="<?= e(url('/expenses')); ?>"><i class="bi bi-wallet2"></i><span>Dépenses</span></a>
                     <a class="nav-link <?= is_active_path(['/reports']); ?>" href="<?= e(url('/reports')); ?>"><i class="bi bi-bar-chart-line"></i><span>Rapports</span></a>
                 </div>
             </div>

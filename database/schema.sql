@@ -11,6 +11,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS activity_logs;
 DROP TABLE IF EXISTS expenses;
+DROP TABLE IF EXISTS expense_payments;
 DROP TABLE IF EXISTS expense_categories;
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS invoice_items;
@@ -18,6 +19,7 @@ DROP TABLE IF EXISTS invoices;
 DROP TABLE IF EXISTS quote_items;
 DROP TABLE IF EXISTS quotes;
 DROP TABLE IF EXISTS procurement_items;
+DROP TABLE IF EXISTS procurement_payments;
 DROP TABLE IF EXISTS procurements;
 DROP TABLE IF EXISTS stock_movements;
 DROP TABLE IF EXISTS services;
@@ -194,6 +196,11 @@ CREATE TABLE procurements (
     expected_date DATE NULL,
     received_date DATE NULL,
     status ENUM('draft', 'ordered', 'received', 'cancelled') NOT NULL DEFAULT 'draft',
+    payment_method ENUM('cash', 'mobile_money', 'bank_transfer', 'card', 'cheque', 'other', 'credit') NOT NULL DEFAULT 'cash',
+    payment_status ENUM('unpaid', 'partial_paid', 'paid') NOT NULL DEFAULT 'paid',
+    amount_paid DECIMAL(18,2) NOT NULL DEFAULT 0,
+    balance_due DECIMAL(18,2) NOT NULL DEFAULT 0,
+    settled_at DATETIME NULL,
     subtotal DECIMAL(18,2) NOT NULL DEFAULT 0,
     discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
     tax_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
@@ -204,6 +211,23 @@ CREATE TABLE procurements (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_procurements_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
     CONSTRAINT fk_procurements_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE procurement_payments (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    procurement_id BIGINT UNSIGNED NOT NULL,
+    payment_number VARCHAR(30) NOT NULL UNIQUE,
+    payment_date DATE NOT NULL,
+    amount DECIMAL(18,2) NOT NULL,
+    method ENUM('cash', 'mobile_money', 'bank_transfer', 'card', 'cheque', 'other') NOT NULL DEFAULT 'cash',
+    reference VARCHAR(100) NULL,
+    notes TEXT NULL,
+    recorded_by BIGINT UNSIGNED NOT NULL,
+    deleted_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_procurement_payments_procurement FOREIGN KEY (procurement_id) REFERENCES procurements(id),
+    CONSTRAINT fk_procurement_payments_user FOREIGN KEY (recorded_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE procurement_items (
@@ -359,7 +383,11 @@ CREATE TABLE expenses (
     expense_date DATE NOT NULL,
     description VARCHAR(255) NOT NULL,
     amount DECIMAL(18,2) NOT NULL,
-    payment_method ENUM('cash', 'mobile_money', 'bank_transfer', 'card', 'cheque', 'other') NOT NULL DEFAULT 'cash',
+    payment_method ENUM('cash', 'mobile_money', 'bank_transfer', 'card', 'cheque', 'other', 'credit') NOT NULL DEFAULT 'cash',
+    payment_status ENUM('unpaid', 'partial_paid', 'paid') NOT NULL DEFAULT 'paid',
+    amount_paid DECIMAL(18,2) NOT NULL DEFAULT 0,
+    balance_due DECIMAL(18,2) NOT NULL DEFAULT 0,
+    settled_at DATETIME NULL,
     created_by BIGINT UNSIGNED NOT NULL,
     deleted_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -367,6 +395,23 @@ CREATE TABLE expenses (
     CONSTRAINT fk_expenses_category FOREIGN KEY (expense_category_id) REFERENCES expense_categories(id),
     CONSTRAINT fk_expenses_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
     CONSTRAINT fk_expenses_user FOREIGN KEY (created_by) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE expense_payments (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    expense_id BIGINT UNSIGNED NOT NULL,
+    payment_number VARCHAR(30) NOT NULL UNIQUE,
+    payment_date DATE NOT NULL,
+    amount DECIMAL(18,2) NOT NULL,
+    method ENUM('cash', 'mobile_money', 'bank_transfer', 'card', 'cheque', 'other') NOT NULL DEFAULT 'cash',
+    reference VARCHAR(100) NULL,
+    notes TEXT NULL,
+    recorded_by BIGINT UNSIGNED NOT NULL,
+    deleted_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_expense_payments_expense FOREIGN KEY (expense_id) REFERENCES expenses(id),
+    CONSTRAINT fk_expense_payments_user FOREIGN KEY (recorded_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE number_sequences (
@@ -467,6 +512,8 @@ INSERT INTO number_sequences (document_type, prefix, last_number, padding, fisca
 ('quote', 'DEV', 1, 5, 2026),
 ('invoice', 'FAC', 1, 5, 2026),
 ('payment', 'PAY', 1, 5, 2026),
+('expense_payment', 'REG', 1, 5, 2026),
+('procurement_payment', 'RAP', 1, 5, 2026),
 ('procurement', 'APP', 1, 5, 2026),
 ('expense', 'DEP', 1, 5, 2026),
 ('client', 'CLI', 2, 4, 2026),
@@ -480,13 +527,16 @@ INSERT INTO expense_categories (name, description) VALUES
 ('Énergie', 'Électricité et carburant'),
 ('Sous-traitance', 'Prestations techniques externes');
 
-INSERT INTO procurements (supplier_id, user_id, procurement_number, procurement_date, expected_date, received_date, status, subtotal, discount_amount, tax_amount, grand_total, notes) VALUES
-(1, 3, 'APP-2026-00001', '2026-03-01', '2026-03-03', '2026-03-03', 'received', 1300.00, 0.00, 0.00, 1300.00, 'Approvisionnement initial de consommables'),
-(2, 3, 'APP-2026-00002', '2026-03-05', '2026-03-06', '2026-03-06', 'received', 380.00, 0.00, 0.00, 380.00, 'Réception de switches réseau');
+INSERT INTO procurements (supplier_id, user_id, procurement_number, procurement_date, expected_date, received_date, status, payment_method, payment_status, amount_paid, balance_due, settled_at, subtotal, discount_amount, tax_amount, grand_total, notes) VALUES
+(1, 3, 'APP-2026-00001', '2026-03-01', '2026-03-03', '2026-03-03', 'received', 'cash', 'paid', 1300.00, 0.00, '2026-03-01 10:00:00', 1300.00, 0.00, 0.00, 1300.00, 'Approvisionnement initial de consommables'),
+(2, 3, 'APP-2026-00002', '2026-03-05', '2026-03-06', '2026-03-06', 'received', 'credit', 'unpaid', 0.00, 380.00, NULL, 380.00, 0.00, 0.00, 380.00, 'Réception de switches réseau à crédit');
 
 INSERT INTO procurement_items (procurement_id, product_id, quantity, unit_cost, line_total) VALUES
 (1, 1, 20, 65.00, 1300.00),
 (2, 2, 10, 38.00, 380.00);
+
+INSERT INTO procurement_payments (procurement_id, payment_number, payment_date, amount, method, reference, notes, recorded_by) VALUES
+(1, 'RAP-2026-00001', '2026-03-01', 1300.00, 'cash', NULL, 'Règlement initial de l’approvisionnement', 3);
 
 INSERT INTO quotes (client_id, quote_number, quote_date, valid_until, status, subtotal, discount_amount, tax_amount, grand_total, notes, created_by) VALUES
 (1, 'DEV-2026-00001', '2026-03-10', '2026-03-20', 'converted', 690.00, 0.00, 0.00, 690.00, 'Devis mixte produits et services', 1);
@@ -505,9 +555,12 @@ INSERT INTO invoice_items (invoice_id, item_type, product_id, service_id, descri
 INSERT INTO payments (invoice_id, payment_number, payment_date, amount, method, reference, notes, received_by) VALUES
 (1, 'PAY-2026-00001', '2026-03-12', 300.00, 'mobile_money', 'MOMO-987654', 'Acompte reçu à la validation', 2);
 
-INSERT INTO expenses (expense_category_id, supplier_id, expense_number, expense_date, description, amount, payment_method, created_by) VALUES
-(2, NULL, 'DEP-2026-00001', '2026-03-02', 'Abonnement internet siège', 120.00, 'bank_transfer', 5),
-(1, NULL, 'DEP-2026-00002', '2026-03-08', 'Transport matériel vers client', 45.00, 'cash', 5);
+INSERT INTO expenses (expense_category_id, supplier_id, expense_number, expense_date, description, amount, payment_method, payment_status, amount_paid, balance_due, settled_at, created_by) VALUES
+(2, NULL, 'DEP-2026-00001', '2026-03-02', 'Abonnement internet siège', 120.00, 'bank_transfer', 'paid', 120.00, 0.00, '2026-03-02 09:00:00', 2),
+(1, 1, 'DEP-2026-00002', '2026-03-08', 'Transport matériel vers client', 45.00, 'credit', 'unpaid', 0.00, 45.00, NULL, 2);
+
+INSERT INTO expense_payments (expense_id, payment_number, payment_date, amount, method, reference, notes, recorded_by) VALUES
+(1, 'REG-2026-00001', '2026-03-02', 120.00, 'bank_transfer', 'VIR-DEP-001', 'Règlement immédiat de la dépense', 2);
 
 INSERT INTO stock_movements (product_id, movement_type, quantity, quantity_before, quantity_after, reference_type, reference_id, note, movement_date, created_by) VALUES
 (1, 'procurement_receipt', 20, 0, 20, 'procurement', 1, 'Réception approvisionnement initial', '2026-03-03 10:00:00', 3),

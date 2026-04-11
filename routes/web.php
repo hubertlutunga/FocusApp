@@ -92,6 +92,7 @@ $router->get('/procurements/create', [ProcurementController::class, 'create'], [
 $router->post('/procurements/store', [ProcurementController::class, 'store'], [StockManagerMiddleware::class]);
 $router->get('/procurements/show', [ProcurementController::class, 'show'], [StockManagerMiddleware::class]);
 $router->post('/procurements/receive', [ProcurementController::class, 'receive'], [StockManagerMiddleware::class]);
+$router->post('/procurements/pay', [ProcurementController::class, 'pay'], [StockManagerMiddleware::class]);
 $router->post('/procurements/cancel', [ProcurementController::class, 'cancel'], [AdminMiddleware::class]);
 
 $router->get('/quotes', [QuoteController::class, 'index'], [CommercialMiddleware::class]);
@@ -117,8 +118,10 @@ $router->post('/payments/store', [PaymentController::class, 'store'], [Commercia
 $router->get('/expenses', [ExpenseController::class, 'index'], [CaisseMiddleware::class]);
 $router->get('/expenses/create', [ExpenseController::class, 'create'], [CaisseMiddleware::class]);
 $router->post('/expenses/store', [ExpenseController::class, 'store'], [CaisseMiddleware::class]);
+$router->get('/expenses/show', [ExpenseController::class, 'show'], [CaisseMiddleware::class]);
 $router->get('/expenses/edit', [ExpenseController::class, 'edit'], [CaisseMiddleware::class]);
 $router->post('/expenses/update', [ExpenseController::class, 'update'], [CaisseMiddleware::class]);
+$router->post('/expenses/pay', [ExpenseController::class, 'pay'], [CaisseMiddleware::class]);
 $router->post('/expenses/delete', [ExpenseController::class, 'delete'], [AdminMiddleware::class]);
 
 $router->get('/reports', [ReportController::class, 'index'], [CaisseMiddleware::class]);

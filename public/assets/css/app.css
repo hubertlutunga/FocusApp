@@ -1259,6 +1259,10 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
+h3.mb-0.text-amount {
+    font-size: 1.4rem;
+}
+
 .badge-soft {
     background: var(--fg-primary-soft);
     color: var(--fg-primary);

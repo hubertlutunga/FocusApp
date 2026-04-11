@@ -8,6 +8,7 @@ use App\Core\Auth;
 use App\Core\Controller;
 use App\Core\Session;
 use App\Models\ActivityLog;
+use App\Models\ProcurementPayment;
 use App\Models\Procurement;
 use App\Models\Product;
 use App\Models\Supplier;
@@ -46,6 +47,7 @@ final class ProcurementController extends Controller
             'expected_date' => ($_POST['expected_date'] ?? '') !== '' ? (string) $_POST['expected_date'] : null,
             'received_date' => null,
             'status' => (string) ($_POST['status'] ?? 'draft'),
+            'payment_method' => (string) ($_POST['payment_method'] ?? 'cash'),
             'subtotal' => 0,
             'discount_amount' => 0,
             'tax_amount' => 0,
@@ -60,6 +62,7 @@ final class ProcurementController extends Controller
             'procurement_date' => $header['procurement_date'],
             'expected_date' => $header['expected_date'],
             'status' => $header['status'],
+            'payment_method' => $header['payment_method'],
             'notes' => $header['notes'],
             'items' => $items !== [] ? $items : $rawItems,
         ]);
@@ -83,14 +86,21 @@ final class ProcurementController extends Controller
         }
 
         try {
+            $procurementModel = new Procurement();
             $header['procurement_number'] = (new NumberSequence())->next('procurement');
-            $procurementId = (new Procurement())->createWithItems($header, $items);
+            $header['payment_number'] = null;
+
+            if ($procurementModel->supportsCreditTracking() && $header['payment_method'] !== 'credit') {
+                $header['payment_number'] = (new NumberSequence())->next('procurement_payment');
+            }
+
+            $procurementId = $procurementModel->createWithItems($header, $items);
             (new ActivityLog())->log('create', 'Création de l’approvisionnement ' . $header['procurement_number'], 'approvisionnements', Auth::id());
             Session::forget('old_input');
             Session::flash('alert', ['icon' => 'success', 'title' => 'Approvisionnement enregistré', 'text' => 'L’approvisionnement a été créé avec succès.']);
             $this->redirect('/procurements/show?id=' . $procurementId);
         } catch (Throwable $throwable) {
-            Session::flash('alert', ['icon' => 'error', 'title' => 'Création impossible', 'text' => 'Impossible d’enregistrer cet approvisionnement.']);
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Création impossible', 'text' => $throwable->getMessage() ?: 'Impossible d’enregistrer cet approvisionnement.']);
             $this->redirect('/procurements/create');
         }
     }
@@ -110,7 +120,40 @@ final class ProcurementController extends Controller
             'pageTitle' => 'Détail approvisionnement',
             'procurement' => $procurement,
             'items' => $procurementModel->items($id),
+            'payments' => (new ProcurementPayment())->byProcurement($id),
         ]);
+    }
+
+    public function pay(): void
+    {
+        verify_csrf();
+        $procurementId = (int) ($_POST['procurement_id'] ?? 0);
+
+        if ($procurementId <= 0) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Approvisionnement introuvable', 'text' => 'Identifiant d’approvisionnement invalide.']);
+            $this->redirect('/procurements');
+        }
+
+        $payload = [
+            'procurement_id' => $procurementId,
+            'payment_number' => (new NumberSequence())->next('procurement_payment'),
+            'payment_date' => (string) ($_POST['payment_date'] ?? date('Y-m-d')),
+            'amount' => (float) ($_POST['amount'] ?? 0),
+            'method' => (string) ($_POST['method'] ?? 'cash'),
+            'reference' => trim((string) ($_POST['reference'] ?? '')),
+            'notes' => trim((string) ($_POST['notes'] ?? '')),
+            'recorded_by' => (int) (Auth::id() ?? 0),
+        ];
+
+        try {
+            (new ProcurementPayment())->createForProcurement($payload);
+            (new ActivityLog())->log('pay', 'Règlement de dette sur l’approvisionnement #' . $procurementId, 'approvisionnements', Auth::id());
+            Session::flash('alert', ['icon' => 'success', 'title' => 'Règlement enregistré', 'text' => 'Le paiement fournisseur a été enregistré.']);
+        } catch (Throwable $throwable) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Règlement impossible', 'text' => $throwable->getMessage() ?: 'Impossible d’enregistrer ce règlement fournisseur.']);
+        }
+
+        $this->redirect('/procurements/show?id=' . $procurementId);
     }
 
     public function receive(): void

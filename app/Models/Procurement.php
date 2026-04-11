@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Model;
+use RuntimeException;
 use Throwable;
 
 final class Procurement extends Model
@@ -55,9 +56,52 @@ final class Procurement extends Model
         $this->db->beginTransaction();
 
         try {
-            $statement = $this->db->prepare('INSERT INTO procurements (supplier_id, user_id, procurement_number, procurement_date, expected_date, received_date, status, subtotal, discount_amount, tax_amount, grand_total, notes, deleted_at, created_at, updated_at)
-                VALUES (:supplier_id, :user_id, :procurement_number, :procurement_date, :expected_date, :received_date, :status, :subtotal, :discount_amount, :tax_amount, :grand_total, :notes, NULL, NOW(), NOW())');
-            $statement->execute($header);
+            $creditSchemaEnabled = $this->supportsCreditTracking();
+
+            if (!$creditSchemaEnabled && $header['payment_method'] === 'credit') {
+                throw new RuntimeException('La base de donnees doit etre migree avant d utiliser les approvisionnements a credit.');
+            }
+
+            if ($creditSchemaEnabled) {
+                $statement = $this->db->prepare('INSERT INTO procurements (supplier_id, user_id, procurement_number, procurement_date, expected_date, received_date, status, payment_method, payment_status, amount_paid, balance_due, settled_at, subtotal, discount_amount, tax_amount, grand_total, notes, deleted_at, created_at, updated_at)
+                    VALUES (:supplier_id, :user_id, :procurement_number, :procurement_date, :expected_date, :received_date, :status, :payment_method, :payment_status, :amount_paid, :balance_due, :settled_at, :subtotal, :discount_amount, :tax_amount, :grand_total, :notes, NULL, NOW(), NOW())');
+                $statement->execute([
+                    'supplier_id' => $header['supplier_id'],
+                    'user_id' => $header['user_id'],
+                    'procurement_number' => $header['procurement_number'],
+                    'procurement_date' => $header['procurement_date'],
+                    'expected_date' => $header['expected_date'],
+                    'received_date' => $header['received_date'],
+                    'status' => $header['status'],
+                    'payment_method' => $header['payment_method'],
+                    'payment_status' => $header['payment_method'] === 'credit' ? 'unpaid' : 'paid',
+                    'amount_paid' => $header['payment_method'] === 'credit' ? 0 : $header['grand_total'],
+                    'balance_due' => $header['payment_method'] === 'credit' ? $header['grand_total'] : 0,
+                    'settled_at' => $header['payment_method'] === 'credit' ? null : date('Y-m-d H:i:s'),
+                    'subtotal' => $header['subtotal'],
+                    'discount_amount' => $header['discount_amount'],
+                    'tax_amount' => $header['tax_amount'],
+                    'grand_total' => $header['grand_total'],
+                    'notes' => $header['notes'],
+                ]);
+            } else {
+                $statement = $this->db->prepare('INSERT INTO procurements (supplier_id, user_id, procurement_number, procurement_date, expected_date, received_date, status, subtotal, discount_amount, tax_amount, grand_total, notes, deleted_at, created_at, updated_at)
+                    VALUES (:supplier_id, :user_id, :procurement_number, :procurement_date, :expected_date, :received_date, :status, :subtotal, :discount_amount, :tax_amount, :grand_total, :notes, NULL, NOW(), NOW())');
+                $statement->execute([
+                    'supplier_id' => $header['supplier_id'],
+                    'user_id' => $header['user_id'],
+                    'procurement_number' => $header['procurement_number'],
+                    'procurement_date' => $header['procurement_date'],
+                    'expected_date' => $header['expected_date'],
+                    'received_date' => $header['received_date'],
+                    'status' => $header['status'],
+                    'subtotal' => $header['subtotal'],
+                    'discount_amount' => $header['discount_amount'],
+                    'tax_amount' => $header['tax_amount'],
+                    'grand_total' => $header['grand_total'],
+                    'notes' => $header['notes'],
+                ]);
+            }
 
             $procurementId = (int) $this->db->lastInsertId();
             $itemStatement = $this->db->prepare('INSERT INTO procurement_items (procurement_id, product_id, quantity, unit_cost, line_total, created_at)
@@ -75,6 +119,25 @@ final class Procurement extends Model
 
             if ($header['status'] === 'received') {
                 $this->applyReceipt($procurementId, (int) $header['user_id']);
+            }
+
+            if ($creditSchemaEnabled && $header['payment_method'] !== 'credit') {
+                $paymentStatement = $this->db->prepare('INSERT INTO procurement_payments (procurement_id, payment_number, payment_date, amount, method, reference, notes, recorded_by, deleted_at, created_at, updated_at)
+                    VALUES (:procurement_id, :payment_number, :payment_date, :amount, :method, :reference, :notes, :recorded_by, NULL, NOW(), NOW())');
+                $paymentStatement->execute([
+                    'procurement_id' => $procurementId,
+                    'payment_number' => $header['payment_number'],
+                    'payment_date' => $header['procurement_date'],
+                    'amount' => $header['grand_total'],
+                    'method' => $header['payment_method'],
+                    'reference' => null,
+                    'notes' => 'Règlement initial à la création de l’approvisionnement.',
+                    'recorded_by' => $header['user_id'],
+                ]);
+            }
+
+            if ($creditSchemaEnabled) {
+                $this->refreshPaymentStatus($procurementId);
             }
 
             $this->db->commit();
@@ -114,6 +177,58 @@ final class Procurement extends Model
     {
         $statement = $this->db->prepare("UPDATE procurements SET status = 'cancelled', updated_at = NOW() WHERE id = :id AND deleted_at IS NULL");
         $statement->execute(['id' => $id]);
+    }
+
+    public function refreshPaymentStatus(int $id): void
+    {
+        if (!$this->supportsCreditTracking()) {
+            return;
+        }
+
+        $statement = $this->db->prepare('SELECT pr.grand_total, COALESCE(SUM(pp.amount), 0) AS paid
+            FROM procurements pr
+            LEFT JOIN procurement_payments pp ON pp.procurement_id = pr.id AND pp.deleted_at IS NULL
+            WHERE pr.id = :id AND pr.deleted_at IS NULL
+            GROUP BY pr.id');
+        $statement->execute(['id' => $id]);
+        $row = $statement->fetch();
+
+        if (!$row) {
+            return;
+        }
+
+        $total = (float) $row['grand_total'];
+        $paid = (float) $row['paid'];
+        $balance = max($total - $paid, 0);
+
+        $paymentStatus = 'unpaid';
+        $settledAt = null;
+        if ($paid >= $total && $total > 0) {
+            $paymentStatus = 'paid';
+            $settledAt = date('Y-m-d H:i:s');
+        } elseif ($paid > 0) {
+            $paymentStatus = 'partial_paid';
+        }
+
+        $update = $this->db->prepare('UPDATE procurements SET amount_paid = :amount_paid, balance_due = :balance_due, payment_status = :payment_status, settled_at = :settled_at, updated_at = NOW() WHERE id = :id');
+        $update->execute([
+            'amount_paid' => $paid,
+            'balance_due' => $balance,
+            'payment_status' => $paymentStatus,
+            'settled_at' => $settledAt,
+            'id' => $id,
+        ]);
+    }
+
+    public function supportsCreditTracking(): bool
+    {
+        $columnStatement = $this->db->query("SHOW COLUMNS FROM procurements LIKE 'balance_due'");
+        $hasBalanceDue = (bool) $columnStatement->fetch();
+
+        $tableStatement = $this->db->query("SHOW TABLES LIKE 'procurement_payments'");
+        $hasPaymentsTable = (bool) $tableStatement->fetch();
+
+        return $hasBalanceDue && $hasPaymentsTable;
     }
 
     private function applyReceipt(int $procurementId, int $userId): void

@@ -12,8 +12,8 @@
         <div class="d-flex align-items-center gap-3">
             <span class="metric-icon primary"><i class="bi bi-pencil-square"></i></span>
             <div>
-                <div class="fw-semibold"><?= $editing ? 'Mise à jour d’une charge existante' : 'Enregistrement d’une nouvelle charge' ?></div>
-                <div class="muted-label">Les champs catégorie, description et montant sont obligatoires.</div>
+                <div class="fw-semibold"><?= $editing ? 'Mise à jour d’une charge existante' : 'Enregistrement d’une nouvelle charge ou dette tiers' ?></div>
+                <div class="muted-label">Les champs catégorie, description et montant sont obligatoires. Le mode À crédit ouvre un suivi de solde.</div>
             </div>
         </div>
     </div>
@@ -36,7 +36,7 @@
             </div>
 
             <div class="col-md-4">
-                <label for="supplier_id" class="form-label">Fournisseur</label>
+                <label for="supplier_id" class="form-label">Tiers / fournisseur</label>
                 <select name="supplier_id" id="supplier_id" class="form-select">
                     <option value="">Aucun</option>
                     <?php foreach ($suppliers as $supplier): ?>
@@ -52,7 +52,7 @@
             </div>
 
             <div class="col-md-8">
-                <label for="description" class="form-label">Description</label>
+                <label for="description" class="form-label">Description / produit / service</label>
                 <input type="text" class="form-control" id="description" name="description" value="<?= e((string) old('description', $expense['description'] ?? '')) ?>" required>
             </div>
 
@@ -64,13 +64,28 @@
             <div class="col-md-2">
                 <label for="payment_method" class="form-label">Paiement</label>
                 <?php $paymentMethod = (string) old('payment_method', $expense['payment_method'] ?? 'cash'); ?>
-                <select name="payment_method" id="payment_method" class="form-select" required>
-                    <option value="cash" <?= $paymentMethod === 'cash' ? 'selected' : '' ?>>Espèces</option>
-                    <option value="bank" <?= $paymentMethod === 'bank' ? 'selected' : '' ?>>Banque</option>
-                    <option value="mobile_money" <?= $paymentMethod === 'mobile_money' ? 'selected' : '' ?>>Mobile Money</option>
-                    <option value="card" <?= $paymentMethod === 'card' ? 'selected' : '' ?>>Carte</option>
-                </select>
+                <?php if ($editing): ?>
+                    <input type="hidden" name="payment_method" value="<?= e($paymentMethod) ?>">
+                    <input type="text" class="form-control" value="<?= e(payment_method_label($paymentMethod)) ?>" disabled>
+                <?php else: ?>
+                    <select name="payment_method" id="payment_method" class="form-select" required>
+                        <option value="cash" <?= $paymentMethod === 'cash' ? 'selected' : '' ?>>Espèces</option>
+                        <option value="bank_transfer" <?= in_array($paymentMethod, ['bank', 'bank_transfer'], true) ? 'selected' : '' ?>>Banque</option>
+                        <option value="mobile_money" <?= $paymentMethod === 'mobile_money' ? 'selected' : '' ?>>Mobile Money</option>
+                        <option value="card" <?= $paymentMethod === 'card' ? 'selected' : '' ?>>Carte</option>
+                        <option value="cheque" <?= $paymentMethod === 'cheque' ? 'selected' : '' ?>>Chèque</option>
+                        <option value="other" <?= $paymentMethod === 'other' ? 'selected' : '' ?>>Autre</option>
+                        <option value="credit" <?= $paymentMethod === 'credit' ? 'selected' : '' ?>>À crédit</option>
+                    </select>
+                <?php endif; ?>
             </div>
+
+            <?php if ($editing && isset($expense['payment_status'])): ?>
+            <div class="col-md-4">
+                <label class="form-label">Statut dette</label>
+                <input type="text" class="form-control" value="<?= e(status_label((string) $expense['payment_status'])) ?>" disabled>
+            </div>
+            <?php endif; ?>
 
             <div class="col-12 d-flex justify-content-end gap-2 mt-4">
                 <a href="<?= e(url('/expenses')) ?>" class="btn btn-light">Annuler</a>

@@ -647,11 +647,11 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
     <div class="col-md-6 col-xl-3">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon primary"><i class="bi bi-people"></i></span>
+                <span class="metric-icon primary"><i class="bi bi-bank2"></i></span>
                 <div>
-                    <p class="text-muted mb-1">Nombre de clients</p>
-                    <h3 class="mb-0"><?= e((string) ($adminOverview['monthly_clients'] ?? 0)); ?></h3>
-                    <small class="metric-subnote">Clients actifs ce mois</small>
+                    <p class="text-muted mb-1">Dette Focus</p>
+                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['focus_debt_total'] ?? 0), 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote">Solde fournisseurs et charges à régler</small>
                 </div>
             </div>
         </div>
