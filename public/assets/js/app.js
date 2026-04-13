@@ -75,14 +75,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const prepareResponsiveTable = function (table) {
         if (table.dataset.mobilePrepared === 'true') {
-            return;
+            return table.dataset.datatableCompatible !== 'false';
         }
 
         const headerRow = table.querySelector('thead tr');
         const bodyRows = table.querySelectorAll('tbody tr');
 
         if (!headerRow || bodyRows.length === 0) {
-            return;
+            table.dataset.datatableCompatible = 'true';
+            return true;
         }
 
         const originalHeaderCount = headerRow.children.length;
@@ -94,7 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (hasColspanRow) {
             table.dataset.mobilePrepared = 'true';
-            return;
+            table.dataset.datatableCompatible = 'false';
+            return false;
         }
 
         const hiddenColumns = Array.from(headerRow.children)
@@ -106,9 +108,10 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
         table.dataset.mobilePrepared = 'true';
+        table.dataset.datatableCompatible = 'true';
 
         if (hiddenColumns.length === 0) {
-            return;
+            return true;
         }
 
         const detailHeader = document.createElement('th');
@@ -124,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         table.dataset.mobileHiddenColumns = hiddenColumns.join(',');
+        return true;
     };
 
     const escapeHtml = function (value) {
@@ -163,7 +167,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (window.jQuery && document.querySelector(tableSelector)) {
         document.querySelectorAll(tableSelector).forEach(function (table) {
-            prepareResponsiveTable(table);
+            const isDatatableCompatible = prepareResponsiveTable(table);
+
+            if (!isDatatableCompatible) {
+                return;
+            }
 
             const hiddenColumns = (table.dataset.mobileHiddenColumns || '')
                 .split(',')
