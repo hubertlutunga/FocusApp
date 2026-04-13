@@ -22,7 +22,7 @@ final class DocumentPdfService
             'Date devis' => $quote['quote_date'],
         ]);
         $this->renderItems($pdf, $items);
-        $this->renderTotals($pdf, (float) $quote['subtotal'], (float) $quote['discount_amount'], (float) $quote['tax_amount'], (float) $quote['grand_total']);
+        $this->renderTotals($pdf, (float) $quote['subtotal'], (float) $quote['discount_amount'], tax_rate_label($quote['tax_rate'] ?? 0), (float) $quote['tax_amount'], (float) $quote['grand_total']);
         $pdf->Output('I', $quote['quote_number'] . '.pdf');
         exit;
     }
@@ -39,7 +39,7 @@ final class DocumentPdfService
             'Solde' => number_format((float) $invoice['balance_due'], 2, ',', ' ') . ' ' . (($company['currency_code'] ?? 'USD')),
         ]);
         $this->renderItems($pdf, $items);
-        $this->renderTotals($pdf, (float) $invoice['subtotal'], (float) $invoice['discount_amount'], (float) $invoice['tax_amount'], (float) $invoice['grand_total']);
+        $this->renderTotals($pdf, (float) $invoice['subtotal'], (float) $invoice['discount_amount'], tax_rate_label($invoice['tax_rate'] ?? 0), (float) $invoice['tax_amount'], (float) $invoice['grand_total']);
         $pdf->Ln(4);
         $pdf->SetFont('Arial', 'B', 11);
         $pdf->Cell(0, 8, $this->pdfText('Montant payé : ') . number_format((float) $invoice['amount_paid'], 2, ',', ' ') . ' ' . (($company['currency_code'] ?? 'USD')), 0, 1, 'R');
@@ -180,7 +180,7 @@ final class DocumentPdfService
         }
     }
 
-    private function renderTotals(\FPDF $pdf, float $subtotal, float $discount, float $tax, float $grandTotal): void
+    private function renderTotals(\FPDF $pdf, float $subtotal, float $discount, string $taxLabel, float $tax, float $grandTotal): void
     {
         $pdf->Ln(4);
         $startX = 132;
@@ -196,7 +196,7 @@ final class DocumentPdfService
         $pdf->Cell(30, 6, $this->pdfText('Remise'), 0, 0, 'L');
         $pdf->Cell(28, 6, number_format($discount, 2, ',', ' '), 0, 1, 'R');
         $pdf->SetX($startX + 4);
-        $pdf->Cell(30, 6, $this->pdfText('Taxes'), 0, 0, 'L');
+        $pdf->Cell(30, 6, $this->pdfText($taxLabel), 0, 0, 'L');
         $pdf->Cell(28, 6, number_format($tax, 2, ',', ' '), 0, 1, 'R');
         $pdf->SetX($startX + 4);
         $pdf->SetFont('Arial', 'B', 11);

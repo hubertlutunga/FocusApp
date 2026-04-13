@@ -272,6 +272,7 @@ CREATE TABLE quotes (
     status ENUM('draft', 'sent', 'approved', 'rejected', 'converted', 'cancelled') NOT NULL DEFAULT 'draft',
     subtotal DECIMAL(18,2) NOT NULL DEFAULT 0,
     discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    tax_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     tax_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
     grand_total DECIMAL(18,2) NOT NULL DEFAULT 0,
     notes TEXT NULL,
@@ -311,6 +312,7 @@ CREATE TABLE invoices (
     status ENUM('draft', 'validated', 'partial_paid', 'paid', 'cancelled') NOT NULL DEFAULT 'draft',
     subtotal DECIMAL(18,2) NOT NULL DEFAULT 0,
     discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    tax_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     tax_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
     grand_total DECIMAL(18,2) NOT NULL DEFAULT 0,
     amount_paid DECIMAL(18,2) NOT NULL DEFAULT 0,
@@ -538,15 +540,15 @@ INSERT INTO procurement_items (procurement_id, product_id, quantity, unit_cost, 
 INSERT INTO procurement_payments (procurement_id, payment_number, payment_date, amount, method, reference, notes, recorded_by) VALUES
 (1, 'RAP-2026-00001', '2026-03-01', 1300.00, 'cash', NULL, 'Règlement initial de l’approvisionnement', 3);
 
-INSERT INTO quotes (client_id, quote_number, quote_date, valid_until, status, subtotal, discount_amount, tax_amount, grand_total, notes, created_by) VALUES
-(1, 'DEV-2026-00001', '2026-03-10', '2026-03-20', 'converted', 690.00, 0.00, 0.00, 690.00, 'Devis mixte produits et services', 1);
+INSERT INTO quotes (client_id, quote_number, quote_date, valid_until, status, subtotal, discount_amount, tax_rate, tax_amount, grand_total, notes, created_by) VALUES
+(1, 'DEV-2026-00001', '2026-03-10', '2026-03-20', 'converted', 690.00, 0.00, 0.00, 0.00, 690.00, 'Devis mixte produits et services', 1);
 
 INSERT INTO quote_items (quote_id, item_type, product_id, service_id, description, quantity, unit_price, discount_amount, tax_amount, line_total) VALUES
 (1, 'product', 1, NULL, 'Toner HP 85A', 2, 95.00, 0.00, 0.00, 190.00),
 (1, 'service', NULL, 1, 'Installation caméras de surveillance', 1, 500.00, 0.00, 0.00, 500.00);
 
-INSERT INTO invoices (quote_id, client_id, invoice_number, invoice_date, due_date, status, subtotal, discount_amount, tax_amount, grand_total, amount_paid, balance_due, notes, validated_at, created_by, validated_by) VALUES
-(1, 1, 'FAC-2026-00001', '2026-03-12', '2026-03-19', 'partial_paid', 690.00, 0.00, 0.00, 690.00, 300.00, 390.00, 'Facture issue du devis DEV-2026-00001', '2026-03-12 09:30:00', 1, 1);
+INSERT INTO invoices (quote_id, client_id, invoice_number, invoice_date, due_date, status, subtotal, discount_amount, tax_rate, tax_amount, grand_total, amount_paid, balance_due, notes, validated_at, created_by, validated_by) VALUES
+(1, 1, 'FAC-2026-00001', '2026-03-12', '2026-03-19', 'partial_paid', 690.00, 0.00, 0.00, 0.00, 690.00, 300.00, 390.00, 'Facture issue du devis DEV-2026-00001', '2026-03-12 09:30:00', 1, 1);
 
 INSERT INTO invoice_items (invoice_id, item_type, product_id, service_id, description, quantity, unit_price, discount_amount, tax_amount, line_total) VALUES
 (1, 'product', 1, NULL, 'Toner HP 85A', 2, 95.00, 0.00, 0.00, 190.00),

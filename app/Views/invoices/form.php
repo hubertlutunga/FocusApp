@@ -4,6 +4,8 @@ if ($oldItems === []) {
     $oldItems = [['item_type' => 'product', 'product_id' => '', 'service_id' => '', 'description' => '', 'quantity' => 1, 'unit_price' => 0]];
 }
 $selectedClient = (int) old('client_id', '0');
+$selectedTaxRate = normalize_tax_rate(old_value('tax_rate', 0));
+$taxOptions = tax_rate_options();
 ?>
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
@@ -32,6 +34,14 @@ $selectedClient = (int) old('client_id', '0');
             <div class="col-md-4">
                 <label class="form-label" for="due_date">Échéance</label>
                 <input type="date" class="form-control" id="due_date" name="due_date" value="<?= e(old('due_date', date('Y-m-d', strtotime('+7 days')))); ?>">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="invoiceTaxRate">Taxe</label>
+                <select class="form-select" id="invoiceTaxRate" name="tax_rate">
+                    <?php foreach ($taxOptions as $rate => $label): ?>
+                        <option value="<?= e((string) $rate); ?>" <?= abs($selectedTaxRate - (float) $rate) < 0.001 ? 'selected' : ''; ?>><?= e($label); ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
             <div class="col-12">
                 <label class="form-label" for="notes">Notes</label>
@@ -65,6 +75,15 @@ $selectedClient = (int) old('client_id', '0');
                     </table>
                 </div>
             </div>
+            <div class="col-lg-4 ms-lg-auto">
+                <div class="card bg-light border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between"><span>Sous-total HT</span><strong id="invoiceSubtotal">0.00</strong></div>
+                        <div class="d-flex justify-content-between mt-2"><span id="invoiceTaxLabel"><?= e(tax_rate_label($selectedTaxRate)); ?></span><strong id="invoiceTaxAmount">0.00</strong></div>
+                        <div class="d-flex justify-content-between mt-3 pt-3 border-top"><span class="fw-semibold">Total TTC</span><strong class="fs-5" id="invoiceGrandTotal">0.00</strong></div>
+                    </div>
+                </div>
+            </div>
             <div class="col-12 d-flex justify-content-end">
                 <button type="submit" class="btn btn-primary">Enregistrer la facture</button>
             </div>
@@ -76,11 +95,46 @@ document.addEventListener('DOMContentLoaded', function () {
     const products = <?= json_encode($products, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const services = <?= json_encode($services, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const tableBody = document.querySelector('#invoiceItemsTable tbody');
+    const taxRateInput = document.getElementById('invoiceTaxRate');
+    const subtotalOutput = document.getElementById('invoiceSubtotal');
+    const taxLabelOutput = document.getElementById('invoiceTaxLabel');
+    const taxAmountOutput = document.getElementById('invoiceTaxAmount');
+    const grandTotalOutput = document.getElementById('invoiceGrandTotal');
+
+    function formatAmount(value) {
+        return value.toFixed(2);
+    }
+
+    function currentTaxRate() {
+        return parseFloat(taxRateInput.value || '0');
+    }
+
+    function currentTaxLabel() {
+        const selected = taxRateInput.options[taxRateInput.selectedIndex];
+        return selected ? selected.textContent : 'Exonere';
+    }
+
+    function recalcTotals() {
+        let subtotal = 0;
+
+        tableBody.querySelectorAll('tr').forEach(function (row) {
+            subtotal += parseFloat(row.querySelector('.total-input').value || '0');
+        });
+
+        const taxAmount = subtotal * (currentTaxRate() / 100);
+        const grandTotal = subtotal + taxAmount;
+
+        subtotalOutput.textContent = formatAmount(subtotal);
+        taxLabelOutput.textContent = currentTaxLabel();
+        taxAmountOutput.textContent = formatAmount(taxAmount);
+        grandTotalOutput.textContent = formatAmount(grandTotal);
+    }
 
     function recalc(row) {
         const qty = parseFloat(row.querySelector('.quantity-input').value || '0');
         const price = parseFloat(row.querySelector('.price-input').value || '0');
         row.querySelector('.total-input').value = (qty * price).toFixed(2);
+        recalcTotals();
     }
     function syncType(row) {
         const type = row.querySelector('.item-type').value;
@@ -102,10 +156,16 @@ document.addEventListener('DOMContentLoaded', function () {
         row.querySelector('.service-select').addEventListener('change', function () { syncReference(row, this); });
         row.querySelector('.quantity-input').addEventListener('input', function () { recalc(row); });
         row.querySelector('.price-input').addEventListener('input', function () { recalc(row); });
-        row.querySelector('.remove-row').addEventListener('click', function () { if (tableBody.querySelectorAll('tr').length > 1) row.remove(); });
+        row.querySelector('.remove-row').addEventListener('click', function () {
+            if (tableBody.querySelectorAll('tr').length > 1) {
+                row.remove();
+                recalcTotals();
+            }
+        });
         syncType(row); recalc(row);
     }
     document.querySelectorAll('#invoiceItemsTable tbody tr').forEach(bindRow);
+    taxRateInput.addEventListener('change', recalcTotals);
     document.getElementById('addInvoiceRow').addEventListener('click', function () {
         const productOptions = products.map(product => `<option value="${product.id}" data-name="${product.name}" data-price="${product.sale_price}">${product.name} (${product.sku})</option>`).join('');
         const serviceOptions = services.map(service => `<option value="${service.id}" data-name="${service.name}" data-price="${service.unit_price}">${service.name} (${service.code})</option>`).join('');
@@ -113,5 +173,7 @@ document.addEventListener('DOMContentLoaded', function () {
         row.innerHTML = `<td><select class="form-select item-type" name="items[item_type][]"><option value="product">Produit</option><option value="service">Service</option></select></td><td><select class="form-select product-select" name="items[product_id][]"><option value="">Produit</option>${productOptions}</select><select class="form-select service-select d-none" name="items[service_id][]"><option value="">Service</option>${serviceOptions}</select></td><td><input class="form-control description-input" name="items[description][]"></td><td><input type="number" step="0.01" min="0.01" class="form-control quantity-input" name="items[quantity][]" value="1"></td><td><input type="number" step="0.01" min="0" class="form-control price-input" name="items[unit_price][]" value="0"></td><td><input type="text" class="form-control total-input" value="0.00" readonly></td><td><button type="button" class="btn btn-sm btn-outline-danger remove-row">×</button></td>`;
         tableBody.appendChild(row); bindRow(row);
     });
+
+    recalcTotals();
 });
 </script>

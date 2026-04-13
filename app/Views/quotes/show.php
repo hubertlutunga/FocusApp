@@ -41,6 +41,7 @@
                         <div><span>Date d’émission</span><strong><?= e(date('d/m/Y', strtotime((string) $quote['quote_date']))); ?></strong></div>
                         <div><span>Validité</span><strong><?= e($quote['valid_until'] ? date('d/m/Y', strtotime((string) $quote['valid_until'])) : '—'); ?></strong></div>
                         <div><span>Sous-total</span><strong><?= e(number_format((float) $quote['subtotal'], 2, ',', ' ')); ?></strong></div>
+                        <div><span><?= e(tax_rate_label($quote['tax_rate'] ?? 0)); ?></span><strong><?= e(number_format((float) $quote['tax_amount'], 2, ',', ' ')); ?></strong></div>
                         <div class="highlight"><span>Total TTC</span><strong><?= e(number_format((float) $quote['grand_total'], 2, ',', ' ')); ?></strong></div>
                     </div>
 

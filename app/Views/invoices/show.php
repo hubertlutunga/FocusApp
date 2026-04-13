@@ -107,7 +107,7 @@
                     <div class="document-summary-grid">
                         <div><span>Sous-total</span><strong><?= e(number_format((float) $invoice['subtotal'], 2, ',', ' ')); ?></strong></div>
                         <div><span>Remise</span><strong><?= e(number_format((float) $invoice['discount_amount'], 2, ',', ' ')); ?></strong></div>
-                        <div><span>Taxes</span><strong><?= e(number_format((float) $invoice['tax_amount'], 2, ',', ' ')); ?></strong></div>
+                        <div><span><?= e(tax_rate_label($invoice['tax_rate'] ?? 0)); ?></span><strong><?= e(number_format((float) $invoice['tax_amount'], 2, ',', ' ')); ?></strong></div>
                         <div class="highlight"><span>Total TTC</span><strong><?= e(number_format((float) $invoice['grand_total'], 2, ',', ' ')); ?></strong></div>
                     </div>
                     <?php if (!empty($invoice['notes'])): ?>

@@ -54,8 +54,8 @@ final class Quote extends Model
         $this->db->beginTransaction();
 
         try {
-            $statement = $this->db->prepare('INSERT INTO quotes (client_id, quote_number, quote_date, valid_until, status, subtotal, discount_amount, tax_amount, grand_total, notes, created_by, deleted_at, created_at, updated_at)
-                VALUES (:client_id, :quote_number, :quote_date, :valid_until, :status, :subtotal, :discount_amount, :tax_amount, :grand_total, :notes, :created_by, NULL, NOW(), NOW())');
+            $statement = $this->db->prepare('INSERT INTO quotes (client_id, quote_number, quote_date, valid_until, status, subtotal, discount_amount, tax_rate, tax_amount, grand_total, notes, created_by, deleted_at, created_at, updated_at)
+                VALUES (:client_id, :quote_number, :quote_date, :valid_until, :status, :subtotal, :discount_amount, :tax_rate, :tax_amount, :grand_total, :notes, :created_by, NULL, NOW(), NOW())');
             $statement->execute($header);
             $quoteId = (int) $this->db->lastInsertId();
 

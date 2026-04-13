@@ -67,8 +67,8 @@ final class Invoice extends Model
         $this->db->beginTransaction();
 
         try {
-            $statement = $this->db->prepare('INSERT INTO invoices (quote_id, client_id, invoice_number, invoice_date, due_date, status, subtotal, discount_amount, tax_amount, grand_total, amount_paid, balance_due, notes, validated_at, cancelled_at, created_by, validated_by, deleted_at, created_at, updated_at)
-                VALUES (:quote_id, :client_id, :invoice_number, :invoice_date, :due_date, :status, :subtotal, :discount_amount, :tax_amount, :grand_total, :amount_paid, :balance_due, :notes, :validated_at, :cancelled_at, :created_by, :validated_by, NULL, NOW(), NOW())');
+            $statement = $this->db->prepare('INSERT INTO invoices (quote_id, client_id, invoice_number, invoice_date, due_date, status, subtotal, discount_amount, tax_rate, tax_amount, grand_total, amount_paid, balance_due, notes, validated_at, cancelled_at, created_by, validated_by, deleted_at, created_at, updated_at)
+                VALUES (:quote_id, :client_id, :invoice_number, :invoice_date, :due_date, :status, :subtotal, :discount_amount, :tax_rate, :tax_amount, :grand_total, :amount_paid, :balance_due, :notes, :validated_at, :cancelled_at, :created_by, :validated_by, NULL, NOW(), NOW())');
             $statement->execute($header);
             $invoiceId = (int) $this->db->lastInsertId();
 
@@ -118,6 +118,7 @@ final class Invoice extends Model
             'status' => 'draft',
             'subtotal' => (float) $quote['subtotal'],
             'discount_amount' => (float) $quote['discount_amount'],
+            'tax_rate' => (float) ($quote['tax_rate'] ?? 0),
             'tax_amount' => (float) $quote['tax_amount'],
             'grand_total' => (float) $quote['grand_total'],
             'amount_paid' => 0,

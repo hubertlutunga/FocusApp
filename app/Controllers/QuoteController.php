@@ -50,6 +50,7 @@ final class QuoteController extends Controller
             'status' => (string) ($_POST['status'] ?? 'draft'),
             'subtotal' => 0,
             'discount_amount' => 0,
+            'tax_rate' => normalize_tax_rate($_POST['tax_rate'] ?? 0),
             'tax_amount' => 0,
             'grand_total' => 0,
             'notes' => trim((string) ($_POST['notes'] ?? '')),
@@ -62,6 +63,7 @@ final class QuoteController extends Controller
             'quote_date' => $header['quote_date'],
             'valid_until' => $header['valid_until'],
             'status' => $header['status'],
+            'tax_rate' => $header['tax_rate'],
             'notes' => $header['notes'],
             'items' => $items,
         ]);
@@ -73,10 +75,12 @@ final class QuoteController extends Controller
 
         foreach ($items as &$item) {
             $item['line_total'] = $item['quantity'] * $item['unit_price'];
+            $item['tax_amount'] = round($item['line_total'] * ($header['tax_rate'] / 100), 2);
             $header['subtotal'] += $item['line_total'];
         }
         unset($item);
-        $header['grand_total'] = $header['subtotal'];
+        $header['tax_amount'] = round($header['subtotal'] * ($header['tax_rate'] / 100), 2);
+        $header['grand_total'] = $header['subtotal'] + $header['tax_amount'];
 
         try {
             $header['quote_number'] = (new NumberSequence())->next('quote');

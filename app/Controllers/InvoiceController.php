@@ -51,6 +51,7 @@ final class InvoiceController extends Controller
             'status' => 'draft',
             'subtotal' => 0,
             'discount_amount' => 0,
+            'tax_rate' => normalize_tax_rate($_POST['tax_rate'] ?? 0),
             'tax_amount' => 0,
             'grand_total' => 0,
             'amount_paid' => 0,
@@ -67,6 +68,7 @@ final class InvoiceController extends Controller
             'client_id' => $header['client_id'],
             'invoice_date' => $header['invoice_date'],
             'due_date' => $header['due_date'],
+            'tax_rate' => $header['tax_rate'],
             'notes' => $header['notes'],
             'items' => $items,
         ]);
@@ -78,10 +80,12 @@ final class InvoiceController extends Controller
 
         foreach ($items as &$item) {
             $item['line_total'] = $item['quantity'] * $item['unit_price'];
+            $item['tax_amount'] = round($item['line_total'] * ($header['tax_rate'] / 100), 2);
             $header['subtotal'] += $item['line_total'];
         }
         unset($item);
-        $header['grand_total'] = $header['subtotal'];
+        $header['tax_amount'] = round($header['subtotal'] * ($header['tax_rate'] / 100), 2);
+        $header['grand_total'] = $header['subtotal'] + $header['tax_amount'];
         $header['balance_due'] = $header['grand_total'];
 
         try {

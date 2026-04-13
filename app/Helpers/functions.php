@@ -311,6 +311,44 @@ if (!function_exists('payment_method_label')) {
     }
 }
 
+if (!function_exists('tax_rate_options')) {
+    function tax_rate_options(): array
+    {
+        return [
+            0.0 => 'Exonere',
+            16.0 => 'TVA 16%',
+        ];
+    }
+}
+
+if (!function_exists('normalize_tax_rate')) {
+    function normalize_tax_rate(mixed $value): float
+    {
+        $rate = round((float) $value, 2);
+
+        foreach (array_keys(tax_rate_options()) as $allowedRate) {
+            if (abs($rate - (float) $allowedRate) < 0.001) {
+                return (float) $allowedRate;
+            }
+        }
+
+        return 0.0;
+    }
+}
+
+if (!function_exists('tax_rate_label')) {
+    function tax_rate_label(mixed $rate): string
+    {
+        $normalizedRate = normalize_tax_rate($rate);
+
+        if ($normalizedRate <= 0) {
+            return 'Exonere';
+        }
+
+        return 'TVA (' . rtrim(rtrim(number_format($normalizedRate, 2, '.', ''), '0'), '.') . '%)';
+    }
+}
+
 if (!function_exists('module_badge_class')) {
     function module_badge_class(?string $module): string
     {

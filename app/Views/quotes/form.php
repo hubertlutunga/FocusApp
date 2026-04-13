@@ -5,6 +5,8 @@ if ($oldItems === []) {
 }
 $selectedClient = (int) old('client_id', '0');
 $statusValue = old('status', 'draft');
+$selectedTaxRate = normalize_tax_rate(old_value('tax_rate', 0));
+$taxOptions = tax_rate_options();
 ?>
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
@@ -40,6 +42,14 @@ $statusValue = old('status', 'draft');
                     <option value="draft" <?= $statusValue === 'draft' ? 'selected' : ''; ?>>Brouillon</option>
                     <option value="sent" <?= $statusValue === 'sent' ? 'selected' : ''; ?>>Envoyé</option>
                     <option value="approved" <?= $statusValue === 'approved' ? 'selected' : ''; ?>>Approuvé</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="quoteTaxRate">Taxe</label>
+                <select class="form-select" id="quoteTaxRate" name="tax_rate">
+                    <?php foreach ($taxOptions as $rate => $label): ?>
+                        <option value="<?= e((string) $rate); ?>" <?= abs($selectedTaxRate - (float) $rate) < 0.001 ? 'selected' : ''; ?>><?= e($label); ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-12">
@@ -99,6 +109,15 @@ $statusValue = old('status', 'draft');
                     </table>
                 </div>
             </div>
+            <div class="col-lg-4 ms-lg-auto">
+                <div class="card bg-light border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between"><span>Sous-total HT</span><strong id="quoteSubtotal">0.00</strong></div>
+                        <div class="d-flex justify-content-between mt-2"><span id="quoteTaxLabel"><?= e(tax_rate_label($selectedTaxRate)); ?></span><strong id="quoteTaxAmount">0.00</strong></div>
+                        <div class="d-flex justify-content-between mt-3 pt-3 border-top"><span class="fw-semibold">Total TTC</span><strong class="fs-5" id="quoteGrandTotal">0.00</strong></div>
+                    </div>
+                </div>
+            </div>
             <div class="col-12 d-flex justify-content-end">
                 <button type="submit" class="btn btn-primary">Enregistrer le devis</button>
             </div>
@@ -110,11 +129,46 @@ document.addEventListener('DOMContentLoaded', function () {
     const products = <?= json_encode($products, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const services = <?= json_encode($services, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const tableBody = document.querySelector('#quoteItemsTable tbody');
+    const taxRateInput = document.getElementById('quoteTaxRate');
+    const subtotalOutput = document.getElementById('quoteSubtotal');
+    const taxLabelOutput = document.getElementById('quoteTaxLabel');
+    const taxAmountOutput = document.getElementById('quoteTaxAmount');
+    const grandTotalOutput = document.getElementById('quoteGrandTotal');
+
+    function formatAmount(value) {
+        return value.toFixed(2);
+    }
+
+    function currentTaxRate() {
+        return parseFloat(taxRateInput.value || '0');
+    }
+
+    function currentTaxLabel() {
+        const selected = taxRateInput.options[taxRateInput.selectedIndex];
+        return selected ? selected.textContent : 'Exonere';
+    }
+
+    function recalcTotals() {
+        let subtotal = 0;
+
+        tableBody.querySelectorAll('tr').forEach(function (row) {
+            subtotal += parseFloat(row.querySelector('.total-input').value || '0');
+        });
+
+        const taxAmount = subtotal * (currentTaxRate() / 100);
+        const grandTotal = subtotal + taxAmount;
+
+        subtotalOutput.textContent = formatAmount(subtotal);
+        taxLabelOutput.textContent = currentTaxLabel();
+        taxAmountOutput.textContent = formatAmount(taxAmount);
+        grandTotalOutput.textContent = formatAmount(grandTotal);
+    }
 
     function recalc(row) {
         const qty = parseFloat(row.querySelector('.quantity-input').value || '0');
         const price = parseFloat(row.querySelector('.price-input').value || '0');
         row.querySelector('.total-input').value = (qty * price).toFixed(2);
+        recalcTotals();
     }
 
     function syncType(row) {
@@ -140,13 +194,17 @@ document.addEventListener('DOMContentLoaded', function () {
         row.querySelector('.quantity-input').addEventListener('input', function () { recalc(row); });
         row.querySelector('.price-input').addEventListener('input', function () { recalc(row); });
         row.querySelector('.remove-row').addEventListener('click', function () {
-            if (tableBody.querySelectorAll('tr').length > 1) row.remove();
+            if (tableBody.querySelectorAll('tr').length > 1) {
+                row.remove();
+                recalcTotals();
+            }
         });
         syncType(row);
         recalc(row);
     }
 
     document.querySelectorAll('#quoteItemsTable tbody tr').forEach(bindRow);
+    taxRateInput.addEventListener('change', recalcTotals);
 
     document.getElementById('addQuoteRow').addEventListener('click', function () {
         const productOptions = products.map(product => `<option value="${product.id}" data-name="${product.name}" data-price="${product.sale_price}">${product.name} (${product.sku})</option>`).join('');
@@ -166,5 +224,7 @@ document.addEventListener('DOMContentLoaded', function () {
         tableBody.appendChild(row);
         bindRow(row);
     });
+
+    recalcTotals();
 });
 </script>
