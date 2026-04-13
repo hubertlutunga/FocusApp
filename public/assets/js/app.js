@@ -73,6 +73,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const tableSelector = '.js-datatable, .datatable';
     const dataTablesRegistry = new Map();
 
+    const getEffectiveColumnCount = function (row) {
+        return Array.from(row.children).reduce(function (count, cell) {
+            return count + Math.max(cell.colSpan || 1, 1);
+        }, 0);
+    };
+
+    const hasConsistentTableColumns = function (table) {
+        const headerRow = table.querySelector('thead tr');
+        const bodyRows = table.querySelectorAll('tbody tr');
+
+        if (!headerRow || bodyRows.length === 0) {
+            return true;
+        }
+
+        const expectedColumnCount = getEffectiveColumnCount(headerRow);
+
+        return Array.from(bodyRows).every(function (row) {
+            return getEffectiveColumnCount(row) === expectedColumnCount;
+        });
+    };
+
     const prepareResponsiveTable = function (table) {
         if (table.dataset.mobilePrepared === 'true') {
             return table.dataset.datatableCompatible !== 'false';
@@ -86,14 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return true;
         }
 
-        const originalHeaderCount = headerRow.children.length;
-        const hasColspanRow = Array.from(bodyRows).some(function (row) {
-            return Array.from(row.children).some(function (cell) {
-                return cell.colSpan > 1 || row.children.length !== originalHeaderCount;
-            });
-        });
-
-        if (hasColspanRow) {
+        if (!hasConsistentTableColumns(table)) {
             table.dataset.mobilePrepared = 'true';
             table.dataset.datatableCompatible = 'false';
             return false;
@@ -170,6 +184,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const isDatatableCompatible = prepareResponsiveTable(table);
 
             if (!isDatatableCompatible) {
+                return;
+            }
+
+            if (!hasConsistentTableColumns(table)) {
+                table.dataset.datatableCompatible = 'false';
                 return;
             }
 

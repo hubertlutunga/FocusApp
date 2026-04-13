@@ -68,7 +68,16 @@ if (!function_exists('url')) {
 if (!function_exists('asset')) {
     function asset(string $path): string
     {
-        return url('public/' . ltrim($path, '/'));
+        $normalizedPath = 'public/' . ltrim($path, '/');
+        $assetUrl = url($normalizedPath);
+        $fullPath = base_path($normalizedPath);
+
+        if (!is_file($fullPath)) {
+            return $assetUrl;
+        }
+
+        $separator = str_contains($assetUrl, '?') ? '&' : '?';
+        return $assetUrl . $separator . 'v=' . filemtime($fullPath);
     }
 }
 
