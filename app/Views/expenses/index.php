@@ -68,11 +68,11 @@ $monthlyExpenses = array_reduce($expenses, static function ($carry, $expense) us
 <div class="card border-0 shadow-sm">
     <div class="card-body">
         <div class="table-toolbar">
-            <span class="summary-chip"><i class="bi bi-funnel"></i> Recherche, tri et pagination disponibles</span>
+            <span class="summary-chip"><i class="bi bi-table"></i> Liste des dépenses</span>
             <span class="muted-label"><?= e((string) $expenseCount) ?> dépense(s) affichée(s)</span>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover table-striped align-middle js-datatable">
+            <table class="table table-hover table-striped align-middle">
                 <thead>
                     <tr>
                         <th>Dépense</th>
