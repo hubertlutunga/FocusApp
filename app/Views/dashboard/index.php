@@ -557,7 +557,7 @@ $debtStateLabel = $debtState === 'critical' ? 'Dette élevée' : ($debtState ===
 $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' ? 'warning' : 'success');
 ?>
 <div class="row g-3 mb-4">
-    <div class="col-md-6 col-xl-3">
+    <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon primary"><i class="bi bi-graph-up-arrow"></i></span>
@@ -569,7 +569,7 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
+    <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon primary"><i class="bi bi-tools"></i></span>
@@ -581,7 +581,7 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
+    <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon success"><i class="bi bi-box-seam"></i></span>
@@ -593,7 +593,7 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
+    <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card admin-metric-card-debt is-<?= e($debtState); ?>">
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon <?= e($debtIconClass); ?>"><i class="bi bi-hourglass-split"></i></span>
@@ -605,7 +605,7 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
+    <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon danger"><i class="bi bi-wallet2"></i></span>
@@ -617,7 +617,19 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
+    <div class="col-md-6 col-xl-4">
+        <div class="card metric-card h-100 admin-metric-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="metric-icon warning"><i class="bi bi-receipt-cutoff"></i></span>
+                <div>
+                    <p class="text-muted mb-1">Tax (TVA)</p>
+                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_tax_collected'] ?? 0), 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote">Total mensuel collecte sur factures</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon success"><i class="bi bi-box-seam"></i></span>
@@ -629,7 +641,7 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
+    <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card admin-metric-card-profit <?= $grossProfitPositive ? 'is-positive' : 'is-negative'; ?>">
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon <?= $grossProfitPositive ? 'success' : 'danger'; ?>"><i class="bi <?= $grossProfitPositive ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow'; ?>"></i></span>
@@ -644,7 +656,7 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
             </div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-3">
+    <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon primary"><i class="bi bi-bank2"></i></span>

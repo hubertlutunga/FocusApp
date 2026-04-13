@@ -117,6 +117,7 @@ final class DashboardController extends Controller
             $todaySales = (float) $db->query("SELECT COALESCE(SUM(grand_total), 0) FROM invoices WHERE deleted_at IS NULL AND status IN ('validated', 'partial_paid', 'paid') AND invoice_date = CURDATE()")->fetchColumn();
             $monthExpenses = (float) $db->query("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE deleted_at IS NULL AND YEAR(expense_date) = YEAR(CURDATE()) AND MONTH(expense_date) = MONTH(CURDATE())")->fetchColumn();
             $todayExpenses = (float) $db->query("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE deleted_at IS NULL AND expense_date = CURDATE()")->fetchColumn();
+            $monthlyTaxCollected = (float) $db->query("SELECT COALESCE(SUM(tax_amount), 0) FROM invoices WHERE deleted_at IS NULL AND status IN ('validated', 'partial_paid', 'paid') AND YEAR(invoice_date) = YEAR(CURDATE()) AND MONTH(invoice_date) = MONTH(CURDATE())")->fetchColumn();
             $grossProfitEstimate = $monthSales - $monthExpenses;
             $monthlyProductSales = (float) $db->query("SELECT COALESCE(SUM(ii.line_total), 0) FROM invoice_items ii INNER JOIN invoices i ON i.id = ii.invoice_id WHERE i.deleted_at IS NULL AND i.status IN ('validated', 'partial_paid', 'paid') AND ii.item_type = 'product' AND YEAR(i.invoice_date) = YEAR(CURDATE()) AND MONTH(i.invoice_date) = MONTH(CURDATE())")->fetchColumn();
             $monthlyServiceSales = (float) $db->query("SELECT COALESCE(SUM(ii.line_total), 0) FROM invoice_items ii INNER JOIN invoices i ON i.id = ii.invoice_id WHERE i.deleted_at IS NULL AND i.status IN ('validated', 'partial_paid', 'paid') AND ii.item_type = 'service' AND YEAR(i.invoice_date) = YEAR(CURDATE()) AND MONTH(i.invoice_date) = MONTH(CURDATE())")->fetchColumn();
@@ -172,6 +173,7 @@ final class DashboardController extends Controller
                 'today_sales' => $todaySales,
                 'month_expenses' => $monthExpenses,
                 'today_expenses' => $todayExpenses,
+                'monthly_tax_collected' => $monthlyTaxCollected,
                 'gross_profit_estimate' => $grossProfitEstimate,
                 'monthly_product_sales' => $monthlyProductSales,
                 'monthly_service_sales' => $monthlyServiceSales,
