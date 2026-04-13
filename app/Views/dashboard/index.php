@@ -572,42 +572,6 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
     <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon primary"><i class="bi bi-tools"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Vente service</p>
-                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_service_sales'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote">Cumul mensuel services</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-4">
-        <div class="card metric-card h-100 admin-metric-card">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon success"><i class="bi bi-box-seam"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Stock valorisé</p>
-                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['stock_value'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote"><?= e((string) ($adminOverview['low_stock_count'] ?? 0)); ?> produit(s) en alerte</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-4">
-        <div class="card metric-card h-100 admin-metric-card admin-metric-card-debt is-<?= e($debtState); ?>">
-            <div class="card-body d-flex align-items-center gap-3">
-                <span class="metric-icon <?= e($debtIconClass); ?>"><i class="bi bi-hourglass-split"></i></span>
-                <div>
-                    <p class="text-muted mb-1">Dette client</p>
-                    <h3 class="mb-0 text-amount <?= $debtState === 'critical' ? 'text-danger' : ($debtState === 'alert' ? 'text-warning' : 'text-success'); ?>"><?= e(number_format($outstandingTotal, 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote <?= $debtState === 'critical' ? 'text-danger' : ($debtState === 'alert' ? 'text-warning' : 'text-success'); ?>"><?= e($debtStateLabel); ?> · <?= e((string) ($adminOverview['outstanding_count'] ?? 0)); ?> facture(s)</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-4">
-        <div class="card metric-card h-100 admin-metric-card">
-            <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon danger"><i class="bi bi-wallet2"></i></span>
                 <div>
                     <p class="text-muted mb-1">Dépenses</p>
@@ -620,11 +584,23 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
     <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
+                <span class="metric-icon primary"><i class="bi bi-tools"></i></span>
+                <div>
+                    <p class="text-muted mb-1">Vente service</p>
+                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_service_sales'] ?? 0), 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote">Cumul mensuel services</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-4">
+        <div class="card metric-card h-100 admin-metric-card">
+            <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon warning"><i class="bi bi-receipt-cutoff"></i></span>
                 <div>
-                    <p class="text-muted mb-1">Tax (TVA)</p>
-                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_tax_collected'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote">Total mensuel collecte sur factures</small>
+                    <p class="text-muted mb-1">Vente produit</p>
+                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_product_sales'] ?? 0), 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote">Cumul mensuel produits</small>
                 </div>
             </div>
         </div>
@@ -634,9 +610,9 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon success"><i class="bi bi-box-seam"></i></span>
                 <div>
-                    <p class="text-muted mb-1">Vente produit</p>
-                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_product_sales'] ?? 0), 2, ',', ' ')); ?></h3>
-                    <small class="metric-subnote">Cumul mensuel produits</small>
+                    <p class="text-muted mb-1">Stock valorisé</p>
+                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['stock_value'] ?? 0), 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote"><?= e((string) ($adminOverview['low_stock_count'] ?? 0)); ?> produit(s) en alerte</small>
                 </div>
             </div>
         </div>
@@ -657,6 +633,18 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
         </div>
     </div>
     <div class="col-md-6 col-xl-4">
+        <div class="card metric-card h-100 admin-metric-card admin-metric-card-debt is-<?= e($debtState); ?>">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="metric-icon <?= e($debtIconClass); ?>"><i class="bi bi-hourglass-split"></i></span>
+                <div>
+                    <p class="text-muted mb-1">Dette client</p>
+                    <h3 class="mb-0 text-amount <?= $debtState === 'critical' ? 'text-danger' : ($debtState === 'alert' ? 'text-warning' : 'text-success'); ?>"><?= e(number_format($outstandingTotal, 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote <?= $debtState === 'critical' ? 'text-danger' : ($debtState === 'alert' ? 'text-warning' : 'text-success'); ?>"><?= e($debtStateLabel); ?> · <?= e((string) ($adminOverview['outstanding_count'] ?? 0)); ?> facture(s)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card">
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon primary"><i class="bi bi-bank2"></i></span>
@@ -664,6 +652,18 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
                     <p class="text-muted mb-1">Dette Focus</p>
                     <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['focus_debt_total'] ?? 0), 2, ',', ' ')); ?></h3>
                     <small class="metric-subnote">Solde fournisseurs et charges à régler</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-4">
+        <div class="card metric-card h-100 admin-metric-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="metric-icon warning"><i class="bi bi-receipt-cutoff"></i></span>
+                <div>
+                    <p class="text-muted mb-1">Tax (TVA)</p>
+                    <h3 class="mb-0 text-amount"><?= e(number_format((float) ($adminOverview['monthly_tax_collected'] ?? 0), 2, ',', ' ')); ?></h3>
+                    <small class="metric-subnote">Total mensuel collecte sur factures</small>
                 </div>
             </div>
         </div>
