@@ -44,6 +44,11 @@ final class Expense extends Model
             throw new RuntimeException('La base de donnees doit etre migree avant d enregistrer une depense.');
         }
 
+        $paymentNumber = null;
+        if ($data['payment_method'] !== 'credit') {
+            $paymentNumber = $data['payment_number'] ?? (new NumberSequence())->next('expense_payment');
+        }
+
         $this->db->beginTransaction();
 
         try {
@@ -72,7 +77,7 @@ final class Expense extends Model
                     VALUES (:expense_id, :payment_number, :payment_date, :amount, :method, :reference, :notes, :recorded_by, NULL, NOW(), NOW())');
                 $paymentStatement->execute([
                     'expense_id' => $expenseId,
-                    'payment_number' => $data['payment_number'],
+                    'payment_number' => $paymentNumber,
                     'payment_date' => $data['expense_date'],
                     'amount' => $data['amount'],
                     'method' => $data['payment_method'],

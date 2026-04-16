@@ -55,7 +55,6 @@ final class ExpenseController extends Controller
 
         try {
             $payload['expense_number'] = (new NumberSequence())->next('expense');
-            $payload['payment_number'] = $payload['payment_method'] === 'credit' ? null : (new NumberSequence())->next('expense_payment');
             $expenseId = (new Expense())->create($payload);
             (new ActivityLog())->log('create', 'Création de la dépense ' . $payload['expense_number'], 'depenses', Auth::id());
             Session::forget('old_input');
