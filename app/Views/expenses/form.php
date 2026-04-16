@@ -37,13 +37,20 @@
 
             <div class="col-md-4">
                 <label for="supplier_id" class="form-label">Tiers / fournisseur</label>
-                <select name="supplier_id" id="supplier_id" class="form-select">
-                    <option value="">Aucun</option>
-                    <?php foreach ($suppliers as $supplier): ?>
-                        <?php $selected = (string) old('supplier_id', (string) ($expense['supplier_id'] ?? '')) === (string) $supplier['id']; ?>
-                        <option value="<?= e((string) $supplier['id']) ?>" <?= $selected ? 'selected' : '' ?>><?= e($supplier['company_name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="d-flex gap-2 align-items-start">
+                    <select name="supplier_id" id="supplier_id" class="form-select">
+                        <option value="">Aucun</option>
+                        <?php foreach ($suppliers as $supplier): ?>
+                            <?php $selected = (string) old('supplier_id', (string) ($expense['supplier_id'] ?? '')) === (string) $supplier['id']; ?>
+                            <option value="<?= e((string) $supplier['id']) ?>" <?= $selected ? 'selected' : '' ?>><?= e($supplier['company_name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="btn btn-outline-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#expenseSupplierModal">
+                        <i class="bi bi-plus-lg"></i>
+                        Nouveau
+                    </button>
+                </div>
+                <div class="form-text">Ajoutez un fournisseur sans quitter cette dépense.</div>
             </div>
 
             <div class="col-md-4">
@@ -94,3 +101,142 @@
         </form>
     </div>
 </div>
+
+<div class="modal fade" id="expenseSupplierModal" tabindex="-1" aria-labelledby="expenseSupplierModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h2 class="modal-title h5 mb-1" id="expenseSupplierModalLabel">Nouveau fournisseur</h2>
+                    <p class="text-muted mb-0">Création rapide depuis la saisie de dépense.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="alert alert-danger d-none" id="expenseSupplierModalError" role="alert"></div>
+                <form id="expenseSupplierForm" class="row g-3" action="<?= e(url('/expenses/suppliers/store')) ?>" method="post">
+                    <?= csrf_field() ?>
+                    <div class="col-md-6">
+                        <label class="form-label" for="modal_supplier_company_name">Nom du fournisseur</label>
+                        <input class="form-control" id="modal_supplier_company_name" name="company_name" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="modal_supplier_contact_name">Contact principal</label>
+                        <input class="form-control" id="modal_supplier_contact_name" name="contact_name">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="modal_supplier_phone">Téléphone</label>
+                        <input class="form-control" id="modal_supplier_phone" name="phone">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="modal_supplier_email">Email</label>
+                        <input type="email" class="form-control" id="modal_supplier_email" name="email">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="modal_supplier_city">Ville</label>
+                        <input class="form-control" id="modal_supplier_city" name="city">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="modal_supplier_address">Adresse</label>
+                        <input class="form-control" id="modal_supplier_address" name="address">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="modal_supplier_notes">Notes</label>
+                        <textarea class="form-control" id="modal_supplier_notes" name="notes" rows="3"></textarea>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end gap-2 mt-2">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary" id="expenseSupplierSubmitBtn">Enregistrer le fournisseur</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const supplierForm = document.getElementById('expenseSupplierForm');
+    const supplierSelect = document.getElementById('supplier_id');
+    const modalElement = document.getElementById('expenseSupplierModal');
+    const errorBox = document.getElementById('expenseSupplierModalError');
+    const submitButton = document.getElementById('expenseSupplierSubmitBtn');
+
+    if (!supplierForm || !supplierSelect || !modalElement || !submitButton) {
+        return;
+    }
+
+    const supplierModal = bootstrap.Modal.getOrCreateInstance(modalElement);
+
+    const setError = (message) => {
+        if (!errorBox) {
+            return;
+        }
+
+        if (!message) {
+            errorBox.textContent = '';
+            errorBox.classList.add('d-none');
+            return;
+        }
+
+        errorBox.textContent = message;
+        errorBox.classList.remove('d-none');
+    };
+
+    supplierForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        setError('');
+
+        const formData = new FormData(supplierForm);
+        submitButton.disabled = true;
+        const initialLabel = submitButton.textContent;
+        submitButton.textContent = 'Enregistrement...';
+
+        try {
+            const response = await fetch(supplierForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: formData,
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok || !payload.success || !payload.supplier) {
+                throw new Error(payload.message || 'Impossible de créer ce fournisseur.');
+            }
+
+            const option = document.createElement('option');
+            option.value = String(payload.supplier.id);
+            option.textContent = payload.supplier.company_name;
+            option.selected = true;
+            supplierSelect.appendChild(option);
+            supplierSelect.value = option.value;
+
+            supplierForm.reset();
+            supplierModal.hide();
+
+            if (window.Swal) {
+                window.Swal.fire({
+                    icon: 'success',
+                    title: 'Fournisseur ajouté',
+                    text: payload.message || 'Le fournisseur a été créé avec succès.',
+                    confirmButtonColor: '#0d6efd'
+                });
+            }
+        } catch (error) {
+            setError(error instanceof Error ? error.message : 'Impossible de créer ce fournisseur.');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = initialLabel;
+        }
+    });
+
+    modalElement.addEventListener('hidden.bs.modal', () => {
+        supplierForm.reset();
+        setError('');
+    });
+});
+</script>

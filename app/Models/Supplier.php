@@ -22,10 +22,11 @@ final class Supplier extends Model
         return $supplier ?: null;
     }
 
-    public function create(array $data): void
+    public function create(array $data): int
     {
         $statement = $this->db->prepare('INSERT INTO suppliers (supplier_code, company_name, contact_name, phone, email, address, city, notes, is_active, created_at, updated_at) VALUES (:supplier_code, :company_name, :contact_name, :phone, :email, :address, :city, :notes, :is_active, NOW(), NOW())');
         $statement->execute($data);
+        return (int) $this->db->lastInsertId();
     }
 
     public function updateSupplier(int $id, array $data): void

@@ -40,6 +40,10 @@ final class Expense extends Model
 
     public function create(array $data): int
     {
+        if (!$this->supportsCreditTracking()) {
+            throw new RuntimeException('La base de donnees doit etre migree avant d enregistrer une depense.');
+        }
+
         $this->db->beginTransaction();
 
         try {
@@ -125,6 +129,10 @@ final class Expense extends Model
 
     public function refreshPaymentStatus(int $id): void
     {
+        if (!$this->supportsCreditTracking()) {
+            return;
+        }
+
         $statement = $this->db->prepare('SELECT e.amount, COALESCE(SUM(ep.amount), 0) AS paid
             FROM expenses e
             LEFT JOIN expense_payments ep ON ep.expense_id = e.id AND ep.deleted_at IS NULL
@@ -158,5 +166,13 @@ final class Expense extends Model
             'settled_at' => $settledAt,
             'id' => $id,
         ]);
+    }
+
+    private function supportsCreditTracking(): bool
+    {
+        $columnStatement = $this->db->query("SHOW COLUMNS FROM expenses LIKE 'payment_status'");
+        $paymentsTableStatement = $this->db->query("SHOW TABLES LIKE 'expense_payments'");
+
+        return (bool) $columnStatement->fetch() && (bool) $paymentsTableStatement->fetch();
     }
 }

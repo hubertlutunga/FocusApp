@@ -118,6 +118,7 @@ $router->post('/payments/store', [PaymentController::class, 'store'], [Commercia
 $router->get('/expenses', [ExpenseController::class, 'index'], [CaisseMiddleware::class]);
 $router->get('/expenses/create', [ExpenseController::class, 'create'], [CaisseMiddleware::class]);
 $router->post('/expenses/store', [ExpenseController::class, 'store'], [CaisseMiddleware::class]);
+$router->post('/expenses/suppliers/store', [ExpenseController::class, 'storeSupplier'], [CaisseMiddleware::class]);
 $router->get('/expenses/show', [ExpenseController::class, 'show'], [CaisseMiddleware::class]);
 $router->get('/expenses/edit', [ExpenseController::class, 'edit'], [CaisseMiddleware::class]);
 $router->post('/expenses/update', [ExpenseController::class, 'update'], [CaisseMiddleware::class]);

@@ -62,8 +62,59 @@ final class ExpenseController extends Controller
             Session::flash('alert', ['icon' => 'success', 'title' => 'Dépense enregistrée', 'text' => 'La dépense a été enregistrée avec succès.']);
             $this->redirect('/expenses/show?id=' . $expenseId);
         } catch (Throwable $throwable) {
-            Session::flash('alert', ['icon' => 'error', 'title' => 'Création impossible', 'text' => 'Impossible d’enregistrer cette dépense.']);
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Création impossible', 'text' => $throwable->getMessage() ?: 'Impossible d’enregistrer cette dépense.']);
             $this->redirect('/expenses/create');
+        }
+    }
+
+    public function storeSupplier(): void
+    {
+        verify_csrf();
+
+        $payload = [
+            'company_name' => trim((string) ($_POST['company_name'] ?? '')),
+            'contact_name' => trim((string) ($_POST['contact_name'] ?? '')),
+            'phone' => trim((string) ($_POST['phone'] ?? '')),
+            'email' => trim((string) ($_POST['email'] ?? '')),
+            'address' => trim((string) ($_POST['address'] ?? '')),
+            'city' => trim((string) ($_POST['city'] ?? '')),
+            'notes' => trim((string) ($_POST['notes'] ?? '')),
+            'is_active' => 1,
+        ];
+
+        if ($payload['company_name'] === '') {
+            $this->respondJson([
+                'success' => false,
+                'message' => 'Le nom du fournisseur est obligatoire.',
+            ], 422);
+        }
+
+        if ($payload['email'] !== '' && !filter_var($payload['email'], FILTER_VALIDATE_EMAIL)) {
+            $this->respondJson([
+                'success' => false,
+                'message' => 'Veuillez saisir une adresse email valide.',
+            ], 422);
+        }
+
+        try {
+            $payload['supplier_code'] = (new NumberSequence())->next('supplier');
+            $supplierId = (new Supplier())->create($payload);
+            (new ActivityLog())->log('create', 'Création d’un nouveau fournisseur : ' . $payload['company_name'], 'fournisseurs', Auth::id());
+
+            $this->respondJson([
+                'success' => true,
+                'message' => 'Le fournisseur a été créé avec succès.',
+                'supplier' => [
+                    'id' => $supplierId,
+                    'company_name' => $payload['company_name'],
+                    'supplier_code' => $payload['supplier_code'],
+                ],
+            ]);
+        } catch (Throwable $throwable) {
+            $this->respondJson([
+                'success' => false,
+                'message' => $throwable->getMessage() ?: 'Impossible de créer ce fournisseur.',
+            ], 422);
         }
     }
 
@@ -187,5 +238,13 @@ final class ExpenseController extends Controller
             'payment_method' => (string) ($_POST['payment_method'] ?? 'cash'),
             'created_by' => (int) (Auth::id() ?? 0),
         ];
+    }
+
+    private function respondJson(array $payload, int $statusCode = 200): never
+    {
+        http_response_code($statusCode);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
     }
 }
