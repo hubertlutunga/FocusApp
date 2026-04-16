@@ -1,3 +1,4 @@
+<?php $supportsCreditTracking = $supportsCreditTracking ?? true; ?>
 <div class="row g-4">
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm h-100">
@@ -32,7 +33,7 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white border-0 pt-4 px-4">
                 <h3 class="h5 mb-1">Règlements</h3>
-                <p class="text-muted mb-0">Historique des paiements enregistrés sur cette dette.</p>
+                <p class="text-muted mb-0"><?= $supportsCreditTracking ? 'Historique des paiements enregistrés sur cette dette.' : 'Le suivi détaillé des règlements sera disponible après migration.' ?></p>
             </div>
             <div class="card-body px-4 pb-4">
                 <?php if ($payments === []): ?>
@@ -78,7 +79,7 @@
             </div>
         </div>
 
-        <?php if ((float) $expense['balance_due'] > 0): ?>
+        <?php if ($supportsCreditTracking && (float) $expense['balance_due'] > 0): ?>
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 pt-4 px-4">
                 <h3 class="h5 mb-1">Enregistrer un règlement</h3>

@@ -20,7 +20,9 @@ final class Expense extends Model
                 WHERE e.deleted_at IS NULL
                 ORDER BY e.id DESC';
 
-        return $this->db->query($sql)->fetchAll();
+        $rows = $this->db->query($sql)->fetchAll();
+
+        return array_map(fn (array $row): array => $this->normalizeExpenseRow($row), $rows);
     }
 
     public function find(int $id): ?array
@@ -35,27 +37,33 @@ final class Expense extends Model
         $statement = $this->db->prepare($sql);
         $statement->execute(['id' => $id]);
         $expense = $statement->fetch();
-        return $expense ?: null;
+
+        return $expense ? $this->normalizeExpenseRow($expense) : null;
     }
 
     public function create(array $data): int
     {
-        if (!$this->supportsCreditTracking()) {
+        $supportsCreditTracking = $this->supportsCreditTracking();
+
+        if (!$supportsCreditTracking && $data['payment_method'] === 'credit') {
             throw new RuntimeException('La base de donnees doit etre migree avant d enregistrer une depense.');
         }
 
         $paymentNumber = null;
-        if ($data['payment_method'] !== 'credit') {
+        if ($supportsCreditTracking && $data['payment_method'] !== 'credit') {
             $paymentNumber = $data['payment_number'] ?? (new NumberSequence())->next('expense_payment');
         }
 
         $this->db->beginTransaction();
 
         try {
-            $sql = 'INSERT INTO expenses (expense_category_id, supplier_id, expense_number, expense_date, description, amount, payment_method, payment_status, amount_paid, balance_due, settled_at, created_by, deleted_at, created_at, updated_at)
-                    VALUES (:expense_category_id, :supplier_id, :expense_number, :expense_date, :description, :amount, :payment_method, :payment_status, :amount_paid, :balance_due, :settled_at, :created_by, NULL, NOW(), NOW())';
+            $sql = $supportsCreditTracking
+                ? 'INSERT INTO expenses (expense_category_id, supplier_id, expense_number, expense_date, description, amount, payment_method, payment_status, amount_paid, balance_due, settled_at, created_by, deleted_at, created_at, updated_at)
+                    VALUES (:expense_category_id, :supplier_id, :expense_number, :expense_date, :description, :amount, :payment_method, :payment_status, :amount_paid, :balance_due, :settled_at, :created_by, NULL, NOW(), NOW())'
+                : 'INSERT INTO expenses (expense_category_id, supplier_id, expense_number, expense_date, description, amount, payment_method, created_by, deleted_at, created_at, updated_at)
+                    VALUES (:expense_category_id, :supplier_id, :expense_number, :expense_date, :description, :amount, :payment_method, :created_by, NULL, NOW(), NOW())';
             $statement = $this->db->prepare($sql);
-            $statement->execute([
+            $payload = [
                 'expense_category_id' => $data['expense_category_id'],
                 'supplier_id' => $data['supplier_id'],
                 'expense_number' => $data['expense_number'],
@@ -63,16 +71,21 @@ final class Expense extends Model
                 'description' => $data['description'],
                 'amount' => $data['amount'],
                 'payment_method' => $data['payment_method'],
-                'payment_status' => $data['payment_method'] === 'credit' ? 'unpaid' : 'paid',
-                'amount_paid' => $data['payment_method'] === 'credit' ? 0 : $data['amount'],
-                'balance_due' => $data['payment_method'] === 'credit' ? $data['amount'] : 0,
-                'settled_at' => $data['payment_method'] === 'credit' ? null : date('Y-m-d H:i:s'),
                 'created_by' => $data['created_by'],
-            ]);
+            ];
+
+            if ($supportsCreditTracking) {
+                $payload['payment_status'] = $data['payment_method'] === 'credit' ? 'unpaid' : 'paid';
+                $payload['amount_paid'] = $data['payment_method'] === 'credit' ? 0 : $data['amount'];
+                $payload['balance_due'] = $data['payment_method'] === 'credit' ? $data['amount'] : 0;
+                $payload['settled_at'] = $data['payment_method'] === 'credit' ? null : date('Y-m-d H:i:s');
+            }
+
+            $statement->execute($payload);
 
             $expenseId = (int) $this->db->lastInsertId();
 
-            if ($data['payment_method'] !== 'credit') {
+            if ($supportsCreditTracking && $data['payment_method'] !== 'credit') {
                 $paymentStatement = $this->db->prepare('INSERT INTO expense_payments (expense_id, payment_number, payment_date, amount, method, reference, notes, recorded_by, deleted_at, created_at, updated_at)
                     VALUES (:expense_id, :payment_number, :payment_date, :amount, :method, :reference, :notes, :recorded_by, NULL, NOW(), NOW())');
                 $paymentStatement->execute([
@@ -102,12 +115,14 @@ final class Expense extends Model
 
     public function updateExpense(int $id, array $data): void
     {
-        $paidStatement = $this->db->prepare('SELECT COALESCE(SUM(amount), 0) FROM expense_payments WHERE expense_id = :expense_id AND deleted_at IS NULL');
-        $paidStatement->execute(['expense_id' => $id]);
-        $alreadyPaid = (float) $paidStatement->fetchColumn();
+        if ($this->supportsCreditTracking()) {
+            $paidStatement = $this->db->prepare('SELECT COALESCE(SUM(amount), 0) FROM expense_payments WHERE expense_id = :expense_id AND deleted_at IS NULL');
+            $paidStatement->execute(['expense_id' => $id]);
+            $alreadyPaid = (float) $paidStatement->fetchColumn();
 
-        if ($alreadyPaid > (float) $data['amount']) {
-            throw new RuntimeException('Le montant de la dépense ne peut pas être inférieur aux règlements déjà enregistrés.');
+            if ($alreadyPaid > (float) $data['amount']) {
+                throw new RuntimeException('Le montant de la dépense ne peut pas être inférieur aux règlements déjà enregistrés.');
+            }
         }
 
         $payload = [
@@ -173,11 +188,25 @@ final class Expense extends Model
         ]);
     }
 
-    private function supportsCreditTracking(): bool
+    public function supportsCreditTracking(): bool
     {
         $columnStatement = $this->db->query("SHOW COLUMNS FROM expenses LIKE 'payment_status'");
         $paymentsTableStatement = $this->db->query("SHOW TABLES LIKE 'expense_payments'");
 
         return (bool) $columnStatement->fetch() && (bool) $paymentsTableStatement->fetch();
+    }
+
+    private function normalizeExpenseRow(array $row): array
+    {
+        if ($this->supportsCreditTracking()) {
+            return $row;
+        }
+
+        $row['payment_status'] = 'paid';
+        $row['amount_paid'] = $row['amount'];
+        $row['balance_due'] = 0;
+        $row['settled_at'] = $row['settled_at'] ?? $row['created_at'] ?? null;
+
+        return $row;
     }
 }

@@ -27,11 +27,14 @@ final class ExpenseController extends Controller
 
     public function create(): void
     {
+        $expenseModel = new Expense();
+
         $this->render('expenses.form', [
             'pageTitle' => 'Nouvelle dépense',
             'expense' => null,
             'categories' => (new ExpenseCategory())->options(),
             'suppliers' => (new Supplier())->options(),
+            'supportsCreditTracking' => $expenseModel->supportsCreditTracking(),
             'formAction' => url('/expenses/store'),
             'submitLabel' => 'Enregistrer la dépense',
         ]);
@@ -50,6 +53,11 @@ final class ExpenseController extends Controller
 
         if ($payload['payment_method'] === 'credit' && !$payload['supplier_id']) {
             Session::flash('alert', ['icon' => 'error', 'title' => 'Tiers requis', 'text' => 'Veuillez sélectionner le tiers ou fournisseur pour une dépense à crédit.']);
+            $this->redirect('/expenses/create');
+        }
+
+        if ($payload['payment_method'] === 'credit' && !(new Expense())->supportsCreditTracking()) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Migration requise', 'text' => 'Le mode à crédit nécessite la migration de la base de données des dépenses.']);
             $this->redirect('/expenses/create');
         }
 
@@ -120,7 +128,8 @@ final class ExpenseController extends Controller
     public function show(): void
     {
         $id = (int) ($_GET['id'] ?? 0);
-        $expense = (new Expense())->find($id);
+        $expenseModel = new Expense();
+        $expense = $expenseModel->find($id);
 
         if (!$expense) {
             Session::flash('alert', ['icon' => 'error', 'title' => 'Dépense introuvable', 'text' => 'La dépense demandée n’existe pas.']);
@@ -130,6 +139,7 @@ final class ExpenseController extends Controller
         $this->render('expenses.show', [
             'pageTitle' => 'Détail dépense',
             'expense' => $expense,
+            'supportsCreditTracking' => $expenseModel->supportsCreditTracking(),
             'payments' => (new ExpensePayment())->byExpense($id),
         ]);
     }
@@ -137,7 +147,8 @@ final class ExpenseController extends Controller
     public function edit(): void
     {
         $id = (int) ($_GET['id'] ?? 0);
-        $expense = (new Expense())->find($id);
+        $expenseModel = new Expense();
+        $expense = $expenseModel->find($id);
 
         if (!$expense) {
             Session::flash('alert', ['icon' => 'error', 'title' => 'Dépense introuvable', 'text' => 'La dépense demandée n’existe pas.']);
@@ -149,6 +160,7 @@ final class ExpenseController extends Controller
             'expense' => $expense,
             'categories' => (new ExpenseCategory())->options(),
             'suppliers' => (new Supplier())->options(),
+            'supportsCreditTracking' => $expenseModel->supportsCreditTracking(),
             'formAction' => url('/expenses/update'),
             'submitLabel' => 'Mettre à jour la dépense',
         ]);
@@ -188,9 +200,13 @@ final class ExpenseController extends Controller
             $this->redirect('/expenses');
         }
 
+        if (!(new Expense())->supportsCreditTracking()) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Migration requise', 'text' => 'Les règlements de dépenses nécessitent la migration de la base de données.']);
+            $this->redirect('/expenses/show?id=' . $expenseId);
+        }
+
         $payload = [
             'expense_id' => $expenseId,
-            'payment_number' => (new NumberSequence())->next('expense_payment'),
             'payment_date' => (string) ($_POST['payment_date'] ?? date('Y-m-d')),
             'amount' => (float) ($_POST['amount'] ?? 0),
             'method' => (string) ($_POST['method'] ?? 'cash'),

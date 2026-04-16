@@ -1,4 +1,5 @@
 <?php $editing = isset($expense['id']); ?>
+<?php $supportsCreditTracking = $supportsCreditTracking ?? true; ?>
 <div class="page-hero">
     <div>
         <h1 class="h3 mb-1"><?= $editing ? 'Modifier la dépense' : 'Nouvelle dépense' ?></h1>
@@ -13,7 +14,10 @@
             <span class="metric-icon primary"><i class="bi bi-pencil-square"></i></span>
             <div>
                 <div class="fw-semibold"><?= $editing ? 'Mise à jour d’une charge existante' : 'Enregistrement d’une nouvelle charge ou dette tiers' ?></div>
-                <div class="muted-label">Les champs catégorie, description et montant sont obligatoires. Le mode À crédit ouvre un suivi de solde.</div>
+                <div class="muted-label">
+                    Les champs catégorie, description et montant sont obligatoires.
+                    <?= $supportsCreditTracking ? 'Le mode À crédit ouvre un suivi de solde.' : 'Le mode À crédit sera disponible après migration de la base.' ?>
+                </div>
             </div>
         </div>
     </div>
@@ -82,8 +86,13 @@
                         <option value="card" <?= $paymentMethod === 'card' ? 'selected' : '' ?>>Carte</option>
                         <option value="cheque" <?= $paymentMethod === 'cheque' ? 'selected' : '' ?>>Chèque</option>
                         <option value="other" <?= $paymentMethod === 'other' ? 'selected' : '' ?>>Autre</option>
-                        <option value="credit" <?= $paymentMethod === 'credit' ? 'selected' : '' ?>>À crédit</option>
+                        <?php if ($supportsCreditTracking): ?>
+                            <option value="credit" <?= $paymentMethod === 'credit' ? 'selected' : '' ?>>À crédit</option>
+                        <?php endif; ?>
                     </select>
+                <?php endif; ?>
+                <?php if (!$editing && !$supportsCreditTracking): ?>
+                    <div class="form-text">Le suivi des dettes tiers sera activé après migration.</div>
                 <?php endif; ?>
             </div>
 

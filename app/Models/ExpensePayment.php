@@ -12,6 +12,10 @@ final class ExpensePayment extends Model
 {
     public function byExpense(int $expenseId): array
     {
+        if (!$this->supportsCreditTracking()) {
+            return [];
+        }
+
         $sql = 'SELECT ep.*, u.full_name AS user_name
                 FROM expense_payments ep
                 INNER JOIN users u ON u.id = ep.recorded_by
@@ -24,6 +28,10 @@ final class ExpensePayment extends Model
 
     public function createForExpense(array $data): int
     {
+        if (!$this->supportsCreditTracking()) {
+            throw new RuntimeException('La base de donnees doit etre migree avant d enregistrer un reglement de depense.');
+        }
+
         $this->db->beginTransaction();
 
         try {
@@ -46,6 +54,8 @@ final class ExpensePayment extends Model
                 throw new RuntimeException('Le mode de règlement final ne peut pas être crédit.');
             }
 
+            $data['payment_number'] = $data['payment_number'] ?? (new NumberSequence())->next('expense_payment');
+
             $statement = $this->db->prepare('INSERT INTO expense_payments (expense_id, payment_number, payment_date, amount, method, reference, notes, recorded_by, deleted_at, created_at, updated_at)
                 VALUES (:expense_id, :payment_number, :payment_date, :amount, :method, :reference, :notes, :recorded_by, NULL, NOW(), NOW())');
             $statement->execute($data);
@@ -62,5 +72,13 @@ final class ExpensePayment extends Model
 
             throw $throwable;
         }
+    }
+
+    private function supportsCreditTracking(): bool
+    {
+        $columnStatement = $this->db->query("SHOW COLUMNS FROM expenses LIKE 'payment_status'");
+        $paymentsTableStatement = $this->db->query("SHOW TABLES LIKE 'expense_payments'");
+
+        return (bool) $columnStatement->fetch() && (bool) $paymentsTableStatement->fetch();
     }
 }
