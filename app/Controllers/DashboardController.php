@@ -182,15 +182,15 @@ final class DashboardController extends Controller
                 'outstanding_count' => $outstandingCount,
                 'stock_value' => (float) $stats['stock_value'],
                 'low_stock_count' => $lowStockCount,
-                'payments_total' => (float) ($overview['payments_total'] ?? 0),
+                'payments_total' => (float) ($overview['payments_received'] ?? 0),
             ];
 
             $adminChartData = [
                 'comparison_labels' => $periods,
                 'sales_series' => $salesSeries,
                 'expenses_series' => $expensesSeries,
-                'top_client_labels' => array_map(static fn (array $row): string => $row['company_name'], $topClients),
-                'top_client_values' => array_map(static fn (array $row): float => (float) $row['total'], $topClients),
+                'top_client_labels' => array_map(static fn (array $row): string => (string) $row['client_name'], $topClients),
+                'top_client_values' => array_map(static fn (array $row): float => (float) $row['total_amount'], $topClients),
                 'status_labels' => $statusLabels,
                 'status_values' => $statusValues,
                 'stock_labels' => ['Stock sain', 'Stock faible'],
