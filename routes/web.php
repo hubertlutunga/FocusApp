@@ -91,7 +91,7 @@ $router->get('/procurements', [ProcurementController::class, 'index'], [StockMan
 $router->get('/procurements/create', [ProcurementController::class, 'create'], [StockManagerMiddleware::class]);
 $router->post('/procurements/store', [ProcurementController::class, 'store'], [StockManagerMiddleware::class]);
 $router->get('/procurements/show', [ProcurementController::class, 'show'], [StockManagerMiddleware::class]);
-$router->post('/procurements/receive', [ProcurementController::class, 'receive'], [StockManagerMiddleware::class]);
+$router->post('/procurements/receive', [ProcurementController::class, 'receive'], [AdminMiddleware::class]);
 $router->post('/procurements/pay', [ProcurementController::class, 'pay'], [StockManagerMiddleware::class]);
 $router->post('/procurements/cancel', [ProcurementController::class, 'cancel'], [AdminMiddleware::class]);
 

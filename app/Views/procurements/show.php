@@ -26,12 +26,12 @@
                 <?php endif; ?>
                 <div class="d-flex gap-2 mt-4">
                     <?php if ($procurement['status'] !== 'received' && $procurement['status'] !== 'cancelled'): ?>
-                        <form method="post" action="<?= e(url('/procurements/receive')); ?>">
-                            <?= csrf_field(); ?>
-                            <input type="hidden" name="id" value="<?= e((string) $procurement['id']); ?>">
-                            <button type="submit" class="btn btn-primary">Marquer reçu</button>
-                        </form>
                         <?php if (user_is_admin()): ?>
+                            <form method="post" action="<?= e(url('/procurements/receive')); ?>">
+                                <?= csrf_field(); ?>
+                                <input type="hidden" name="id" value="<?= e((string) $procurement['id']); ?>">
+                                <button type="submit" class="btn btn-primary">Marquer reçu</button>
+                            </form>
                             <form method="post" action="<?= e(url('/procurements/cancel')); ?>" onsubmit="return confirm('Annuler cet approvisionnement ?');">
                                 <?= csrf_field(); ?>
                                 <input type="hidden" name="id" value="<?= e((string) $procurement['id']); ?>">
