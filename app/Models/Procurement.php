@@ -150,6 +150,140 @@ final class Procurement extends Model
         }
     }
 
+    public function updateWithItems(int $id, array $header, array $items): void
+    {
+        $this->db->beginTransaction();
+
+        try {
+            $existing = $this->find($id);
+
+            if (!$existing) {
+                throw new RuntimeException('Approvisionnement introuvable.');
+            }
+
+            if (in_array((string) $existing['status'], ['received', 'cancelled'], true)) {
+                throw new RuntimeException('Seuls les approvisionnements non reçus peuvent être modifiés.');
+            }
+
+            $creditSchemaEnabled = $this->supportsCreditTracking();
+            if (!$creditSchemaEnabled && $header['payment_method'] === 'credit') {
+                throw new RuntimeException('La base de donnees doit etre migree avant d utiliser les approvisionnements a credit.');
+            }
+
+            if ($creditSchemaEnabled && !$this->canEditPaymentsState($id, $existing)) {
+                throw new RuntimeException('Cet approvisionnement ne peut plus être modifié car des règlements ont déjà été enregistrés.');
+            }
+
+            if ($creditSchemaEnabled) {
+                $statement = $this->db->prepare('UPDATE procurements SET
+                        supplier_id = :supplier_id,
+                        procurement_date = :procurement_date,
+                        expected_date = :expected_date,
+                        status = :status,
+                        payment_method = :payment_method,
+                        payment_status = :payment_status,
+                        amount_paid = :amount_paid,
+                        balance_due = :balance_due,
+                        settled_at = :settled_at,
+                        subtotal = :subtotal,
+                        discount_amount = :discount_amount,
+                        tax_amount = :tax_amount,
+                        grand_total = :grand_total,
+                        notes = :notes,
+                        updated_at = NOW()
+                    WHERE id = :id AND deleted_at IS NULL');
+                $statement->execute([
+                    'id' => $id,
+                    'supplier_id' => $header['supplier_id'],
+                    'procurement_date' => $header['procurement_date'],
+                    'expected_date' => $header['expected_date'],
+                    'status' => $header['status'],
+                    'payment_method' => $header['payment_method'],
+                    'payment_status' => $header['payment_method'] === 'credit' ? 'unpaid' : 'paid',
+                    'amount_paid' => $header['payment_method'] === 'credit' ? 0 : $header['grand_total'],
+                    'balance_due' => $header['payment_method'] === 'credit' ? $header['grand_total'] : 0,
+                    'settled_at' => $header['payment_method'] === 'credit' ? null : date('Y-m-d H:i:s'),
+                    'subtotal' => $header['subtotal'],
+                    'discount_amount' => $header['discount_amount'],
+                    'tax_amount' => $header['tax_amount'],
+                    'grand_total' => $header['grand_total'],
+                    'notes' => $header['notes'],
+                ]);
+            } else {
+                $statement = $this->db->prepare('UPDATE procurements SET
+                        supplier_id = :supplier_id,
+                        procurement_date = :procurement_date,
+                        expected_date = :expected_date,
+                        status = :status,
+                        subtotal = :subtotal,
+                        discount_amount = :discount_amount,
+                        tax_amount = :tax_amount,
+                        grand_total = :grand_total,
+                        notes = :notes,
+                        updated_at = NOW()
+                    WHERE id = :id AND deleted_at IS NULL');
+                $statement->execute([
+                    'id' => $id,
+                    'supplier_id' => $header['supplier_id'],
+                    'procurement_date' => $header['procurement_date'],
+                    'expected_date' => $header['expected_date'],
+                    'status' => $header['status'],
+                    'subtotal' => $header['subtotal'],
+                    'discount_amount' => $header['discount_amount'],
+                    'tax_amount' => $header['tax_amount'],
+                    'grand_total' => $header['grand_total'],
+                    'notes' => $header['notes'],
+                ]);
+            }
+
+            $deleteItemsStatement = $this->db->prepare('DELETE FROM procurement_items WHERE procurement_id = :procurement_id');
+            $deleteItemsStatement->execute(['procurement_id' => $id]);
+
+            $itemStatement = $this->db->prepare('INSERT INTO procurement_items (procurement_id, product_id, quantity, unit_cost, line_total, created_at)
+                VALUES (:procurement_id, :product_id, :quantity, :unit_cost, :line_total, NOW())');
+
+            foreach ($items as $item) {
+                $itemStatement->execute([
+                    'procurement_id' => $id,
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_cost' => $item['unit_cost'],
+                    'line_total' => $item['line_total'],
+                ]);
+            }
+
+            if ($creditSchemaEnabled) {
+                $this->db->prepare('UPDATE procurement_payments SET deleted_at = NOW(), updated_at = NOW() WHERE procurement_id = :procurement_id AND deleted_at IS NULL')
+                    ->execute(['procurement_id' => $id]);
+
+                if ($header['payment_method'] !== 'credit') {
+                    $paymentStatement = $this->db->prepare('INSERT INTO procurement_payments (procurement_id, payment_number, payment_date, amount, method, reference, notes, recorded_by, deleted_at, created_at, updated_at)
+                        VALUES (:procurement_id, :payment_number, :payment_date, :amount, :method, :reference, :notes, :recorded_by, NULL, NOW(), NOW())');
+                    $paymentStatement->execute([
+                        'procurement_id' => $id,
+                        'payment_number' => $header['payment_number'],
+                        'payment_date' => $header['procurement_date'],
+                        'amount' => $header['grand_total'],
+                        'method' => $header['payment_method'],
+                        'reference' => null,
+                        'notes' => 'Règlement initial recalculé après modification de l’approvisionnement.',
+                        'recorded_by' => $header['user_id'],
+                    ]);
+                }
+
+                $this->refreshPaymentStatus($id);
+            }
+
+            $this->db->commit();
+        } catch (Throwable $throwable) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+
+            throw $throwable;
+        }
+    }
+
     public function markReceived(int $id, int $userId): void
     {
         $this->db->beginTransaction();
@@ -177,6 +311,27 @@ final class Procurement extends Model
     {
         $statement = $this->db->prepare("UPDATE procurements SET status = 'cancelled', updated_at = NOW() WHERE id = :id AND deleted_at IS NULL");
         $statement->execute(['id' => $id]);
+    }
+
+    public function softDelete(int $id): void
+    {
+        $procurement = $this->find($id);
+
+        if (!$procurement) {
+            throw new RuntimeException('Approvisionnement introuvable.');
+        }
+
+        if (in_array((string) $procurement['status'], ['received', 'cancelled'], true)) {
+            throw new RuntimeException('Seuls les approvisionnements non reçus peuvent être supprimés.');
+        }
+
+        $statement = $this->db->prepare('UPDATE procurements SET deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND deleted_at IS NULL');
+        $statement->execute(['id' => $id]);
+
+        if ($this->supportsCreditTracking()) {
+            $this->db->prepare('UPDATE procurement_payments SET deleted_at = NOW(), updated_at = NOW() WHERE procurement_id = :procurement_id AND deleted_at IS NULL')
+                ->execute(['procurement_id' => $id]);
+        }
     }
 
     public function refreshPaymentStatus(int $id): void
@@ -261,5 +416,18 @@ final class Procurement extends Model
                 'created_by' => $userId,
             ]);
         }
+    }
+
+    private function canEditPaymentsState(int $id, array $existing): bool
+    {
+        $statement = $this->db->prepare('SELECT COUNT(*) FROM procurement_payments WHERE procurement_id = :procurement_id AND deleted_at IS NULL');
+        $statement->execute(['procurement_id' => $id]);
+        $paymentCount = (int) $statement->fetchColumn();
+
+        if (($existing['payment_method'] ?? 'cash') === 'credit') {
+            return $paymentCount === 0;
+        }
+
+        return $paymentCount <= 1 && (float) ($existing['amount_paid'] ?? 0) >= (float) ($existing['grand_total'] ?? 0);
     }
 }

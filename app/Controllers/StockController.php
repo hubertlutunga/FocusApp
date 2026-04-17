@@ -16,13 +16,9 @@ final class StockController extends Controller
 {
     public function index(): void
     {
-        $productModel = new Product();
-
         $this->render('stock.index', [
-            'pageTitle' => 'Stock & mouvements',
-            'movements' => (new StockMovement())->all(),
-            'products' => $productModel->options(),
-            'lowStockProducts' => $productModel->lowStock(),
+            'pageTitle' => 'Stock disponible',
+            'products' => (new Product())->all(),
         ]);
     }
 

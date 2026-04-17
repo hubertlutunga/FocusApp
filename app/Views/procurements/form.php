@@ -1,23 +1,48 @@
 <?php
+$editing = isset($procurement['id']);
 $oldItems = old_array('items');
 if ($oldItems === []) {
-    $oldItems = [['product_id' => '', 'quantity' => 1, 'unit_cost' => 0]];
+    if ($editing && !empty($procurementItems)) {
+        $oldItems = array_map(static fn (array $item): array => [
+            'product_id' => $item['product_id'],
+            'quantity' => $item['quantity'],
+            'unit_cost' => $item['unit_cost'],
+        ], $procurementItems);
+    } else {
+        $oldItems = [['product_id' => '', 'quantity' => 1, 'unit_cost' => 0]];
+    }
 }
-$selectedSupplier = (int) old('supplier_id', '0');
-$statusValue = old('status', 'draft');
-$paymentMethodValue = old('payment_method', 'cash');
+$selectedSupplier = (int) old('supplier_id', (string) ($procurement['supplier_id'] ?? '0'));
+$statusValue = old('status', (string) ($procurement['status'] ?? 'draft'));
+$paymentMethodValue = old('payment_method', (string) ($procurement['payment_method'] ?? 'cash'));
 ?>
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
-        <div>
-            <h3 class="h5 mb-1">Nouvel approvisionnement</h3>
-            <p class="text-muted mb-0">Saisir un achat fournisseur et réceptionner immédiatement si besoin.</p>
-        </div>
-        <a href="<?= e(url('/procurements')); ?>" class="btn btn-outline-secondary">Retour</a>
+
+<div class="page-hero">
+    <div>
+        <h1 class="h3 mb-1"><?= e($pageTitle ?? 'Approvisionnements'); ?></h1>
+        <p class="text-muted mb-0">Préparez un approvisionnement puis consultez les enregistrements juste en dessous.</p>
     </div>
-    <div class="card-body px-4 pb-4">
-        <form method="post" action="<?= e($formAction); ?>" class="row g-3" id="procurementForm">
+    <a href="<?= e(url('/stock')); ?>" class="btn btn-outline-secondary">Retour stock</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="h5 mb-1"><?= $editing ? 'Modifier un approvisionnement' : 'Nouvel approvisionnement'; ?></h3>
+                    <p class="text-muted mb-0">Saisir un achat fournisseur et réceptionner immédiatement si besoin.</p>
+                </div>
+                <?php if ($editing): ?>
+                    <a href="<?= e(url('/procurements')); ?>" class="btn btn-outline-secondary">Nouveau</a>
+                <?php endif; ?>
+            </div>
+            <div class="card-body px-4 pb-4">
+                <form method="post" action="<?= e($formAction); ?>" class="row g-3" id="procurementForm">
             <?= csrf_field(); ?>
+            <?php if ($editing): ?>
+                <input type="hidden" name="id" value="<?= e((string) $procurement['id']); ?>">
+            <?php endif; ?>
             <div class="col-md-4">
                 <label class="form-label" for="supplier_id">Fournisseur</label>
                 <select class="form-select" id="supplier_id" name="supplier_id" required>
@@ -40,7 +65,9 @@ $paymentMethodValue = old('payment_method', 'cash');
                 <select class="form-select" id="status" name="status">
                     <option value="draft" <?= $statusValue === 'draft' ? 'selected' : ''; ?>>Brouillon</option>
                     <option value="ordered" <?= $statusValue === 'ordered' ? 'selected' : ''; ?>>Commandé</option>
-                    <option value="received" <?= $statusValue === 'received' ? 'selected' : ''; ?>>Reçu immédiatement</option>
+                    <?php if (!$editing): ?>
+                        <option value="received" <?= $statusValue === 'received' ? 'selected' : ''; ?>>Reçu immédiatement</option>
+                    <?php endif; ?>
                 </select>
             </div>
             <div class="col-md-4">
@@ -99,9 +126,17 @@ $paymentMethodValue = old('payment_method', 'cash');
             </div>
 
             <div class="col-12 d-flex justify-content-end gap-2 mt-3">
-                <button type="submit" class="btn btn-primary">Enregistrer l’approvisionnement</button>
+                <?php if ($editing): ?>
+                    <a href="<?= e(url('/procurements')); ?>" class="btn btn-light">Annuler</a>
+                <?php endif; ?>
+                <button type="submit" class="btn btn-primary"><?= $editing ? 'Mettre à jour' : 'Enregistrer l’approvisionnement'; ?></button>
             </div>
         </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <?php require view_path('procurements._table'); ?>
     </div>
 </div>
 

@@ -93,7 +93,7 @@ $canAccessStock = user_can_access_stock_management();
                     <a class="nav-link <?= is_active_path(['/products','/products/create','/products/edit']); ?>" href="<?= e(url('/products')); ?>"><i class="bi bi-box-seam"></i><span>Produits</span></a>
                     <a class="nav-link <?= is_active_path(['/services','/services/create','/services/edit']); ?>" href="<?= e(url('/services')); ?>"><i class="bi bi-tools"></i><span>Services</span></a>
                     <a class="nav-link <?= is_active_path(['/stock']); ?>" href="<?= e(url('/stock')); ?>"><i class="bi bi-boxes"></i><span>Stock & mouvements</span></a>
-                    <a class="nav-link <?= is_active_path(['/procurements','/procurements/create','/procurements/show']); ?>" href="<?= e(url('/procurements')); ?>"><i class="bi bi-cart-check"></i><span>Approvisionnements</span></a>
+                    <a class="nav-link <?= is_active_path(['/procurements','/procurements/create','/procurements/show','/procurements/edit']); ?>" href="<?= e(url('/procurements')); ?>"><i class="bi bi-cart-check"></i><span>Approvisionnements</span></a>
                 </div>
             </div>
         </div>

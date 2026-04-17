@@ -90,10 +90,13 @@ $router->post('/stock/adjust', [StockController::class, 'adjust'], [StockManager
 $router->get('/procurements', [ProcurementController::class, 'index'], [StockManagerMiddleware::class]);
 $router->get('/procurements/create', [ProcurementController::class, 'create'], [StockManagerMiddleware::class]);
 $router->post('/procurements/store', [ProcurementController::class, 'store'], [StockManagerMiddleware::class]);
+$router->get('/procurements/edit', [ProcurementController::class, 'edit'], [AdminMiddleware::class]);
+$router->post('/procurements/update', [ProcurementController::class, 'update'], [AdminMiddleware::class]);
 $router->get('/procurements/show', [ProcurementController::class, 'show'], [StockManagerMiddleware::class]);
 $router->post('/procurements/receive', [ProcurementController::class, 'receive'], [AdminMiddleware::class]);
 $router->post('/procurements/pay', [ProcurementController::class, 'pay'], [StockManagerMiddleware::class]);
 $router->post('/procurements/cancel', [ProcurementController::class, 'cancel'], [AdminMiddleware::class]);
+$router->post('/procurements/delete', [ProcurementController::class, 'delete'], [AdminMiddleware::class]);
 
 $router->get('/quotes', [QuoteController::class, 'index'], [CommercialMiddleware::class]);
 $router->get('/quotes/create', [QuoteController::class, 'create'], [CommercialMiddleware::class]);

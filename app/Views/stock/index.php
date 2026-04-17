@@ -1,107 +1,101 @@
-<div class="row g-4">
-    <div class="col-xl-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h3 class="h5 mb-1">Entrée manuelle</h3>
-                <p class="text-muted mb-0">Les sorties sont calculées automatiquement à partir des factures validées par la caisse.</p>
-            </div>
-            <div class="card-body px-4 pb-4">
-                <form method="post" action="<?= e(url('/stock/adjust')); ?>" class="row g-3">
-                    <?= csrf_field(); ?>
-                    <?php $selectedProduct = (int) old('product_id', '0'); ?>
-                    <div class="col-12">
-                        <label class="form-label" for="product_id">Produit</label>
-                        <select class="form-select" id="product_id" name="product_id" required>
-                            <option value="">Sélectionner</option>
-                            <?php foreach ($products as $product): ?>
-                                <option value="<?= e((string) $product['id']); ?>" <?= $selectedProduct === (int) $product['id'] ? 'selected' : ''; ?>><?= e($product['name'] . ' (' . $product['sku'] . ')'); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label" for="quantity">Quantité</label>
-                        <input type="number" step="0.01" min="0.01" class="form-control" id="quantity" name="quantity" value="<?= e(old('quantity', '')); ?>" required>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label" for="note">Note</label>
-                        <textarea class="form-control" id="note" name="note" rows="3"><?= e(old('note', '')); ?></textarea>
-                    </div>
-                    <div class="col-12 d-grid">
-                        <button type="submit" class="btn btn-primary">Enregistrer le mouvement</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+<?php
+$productCount = count($products);
+$totalStock = array_reduce($products, static fn (float $carry, array $product): float => $carry + (float) $product['current_stock'], 0.0);
+$lowStockCount = count(array_filter($products, static fn (array $product): bool => (float) $product['current_stock'] <= (float) $product['minimum_stock']));
+?>
+
+<div class="page-hero">
+    <div>
+        <h1 class="h3 mb-1">Stock disponible</h1>
+        <p class="text-muted mb-0">Consultez rapidement les produits en stock et lancez un approvisionnement si nécessaire.</p>
     </div>
-    <div class="col-xl-8">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h3 class="h5 mb-1">Alertes stock minimum</h3>
-                <p class="text-muted mb-0">Surveillez les références proches de la rupture.</p>
-            </div>
-            <div class="card-body px-4 pb-4">
-                <?php if ($lowStockProducts === []): ?>
-                    <div class="alert alert-success mb-0">Aucune alerte de stock bas pour le moment.</div>
-                <?php else: ?>
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead>
-                                <tr><th>SKU</th><th>Produit</th><th>Stock</th><th>Minimum</th></tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($lowStockProducts as $product): ?>
-                                    <tr>
-                                        <td><?= e($product['sku']); ?></td>
-                                        <td><?= e($product['name']); ?></td>
-                                        <td class="text-danger fw-semibold"><?= e(number_format((float) $product['current_stock'], 2, ',', ' ')); ?></td>
-                                        <td><?= e(number_format((float) $product['minimum_stock'], 2, ',', ' ')); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h3 class="h5 mb-1">Historique des mouvements</h3>
-                <p class="text-muted mb-0">Entrées, sorties issues des factures, réceptions et mouvements manuels autorisés.</p>
-            </div>
-            <div class="card-body px-4 pb-4">
-                <div class="table-responsive">
-                    <table class="table table-striped align-middle js-datatable">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Produit</th>
-                                <th data-mobile-hidden="true">Type</th>
-                                <th>Quantité</th>
-                                <th data-mobile-hidden="true">Avant</th>
-                                <th data-mobile-hidden="true">Après</th>
-                                <th data-mobile-hidden="true">Référence</th>
-                                <th data-mobile-hidden="true">Auteur</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($movements as $movement): ?>
-                                <tr>
-                                    <td><?= e(date('d/m/Y H:i', strtotime((string) $movement['movement_date']))); ?></td>
-                                    <td><?= e($movement['product_name'] . ' (' . $movement['sku'] . ')'); ?></td>
-                                    <td><?= e($movement['movement_type']); ?></td>
-                                    <td class="<?= (float) $movement['quantity'] < 0 ? 'text-danger' : 'text-success'; ?> fw-semibold"><?= e(number_format((float) $movement['quantity'], 2, ',', ' ')); ?></td>
-                                    <td><?= e(number_format((float) $movement['quantity_before'], 2, ',', ' ')); ?></td>
-                                    <td><?= e(number_format((float) $movement['quantity_after'], 2, ',', ' ')); ?></td>
-                                    <td><?= e(($movement['reference_type'] ?? '—') . ($movement['reference_id'] ? ' #' . $movement['reference_id'] : '')); ?></td>
-                                    <td><?= e($movement['user_name'] ?: 'Système'); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+    <a href="<?= e(url('/procurements')); ?>" class="btn btn-primary">
+        <i class="bi bi-cart-plus me-1"></i> Approvisionnement
+    </a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card metric-card h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="metric-icon primary"><i class="bi bi-box-seam"></i></span>
+                <div>
+                    <div class="muted-label">Produits suivis</div>
+                    <div class="h4 mb-0"><?= e((string) $productCount); ?></div>
                 </div>
             </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card metric-card h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="metric-icon success"><i class="bi bi-boxes"></i></span>
+                <div>
+                    <div class="muted-label">Stock total</div>
+                    <div class="h4 mb-0 text-amount"><?= e(number_format($totalStock, 2, ',', ' ')); ?></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card metric-card h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="metric-icon danger"><i class="bi bi-exclamation-triangle"></i></span>
+                <div>
+                    <div class="muted-label">Stock faible</div>
+                    <div class="h4 mb-0"><?= e((string) $lowStockCount); ?></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="h5 mb-1">Produits et stock disponible</h3>
+            <p class="text-muted mb-0">Vue synthétique du stock actuel par produit.</p>
+        </div>
+        <span class="muted-label"><?= e((string) $productCount); ?> produit(s)</span>
+    </div>
+    <div class="card-body px-4 pb-4">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle js-datatable">
+                <thead>
+                    <tr>
+                        <th>Produit</th>
+                        <th data-mobile-hidden="true">Catégorie</th>
+                        <th data-mobile-hidden="true">Unité</th>
+                        <th>Stock disponible</th>
+                        <th data-mobile-hidden="true">Seuil min.</th>
+                        <th data-mobile-hidden="true">Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($products as $product): ?>
+                        <?php $isLowStock = (float) $product['current_stock'] <= (float) $product['minimum_stock']; ?>
+                        <tr>
+                            <td>
+                                <div class="table-cell-stack">
+                                    <div class="table-cell-main"><?= e($product['name']); ?></div>
+                                    <div class="table-cell-meta"><?= e($product['sku']); ?></div>
+                                </div>
+                            </td>
+                            <td><?= e($product['category_name']); ?></td>
+                            <td><?= e($product['unit_symbol'] ?: $product['unit_name']); ?></td>
+                            <td class="fw-semibold <?= $isLowStock ? 'text-danger' : 'text-success'; ?>">
+                                <?= e(number_format((float) $product['current_stock'], 2, ',', ' ')); ?>
+                            </td>
+                            <td><?= e(number_format((float) $product['minimum_stock'], 2, ',', ' ')); ?></td>
+                            <td>
+                                <span class="badge rounded-pill <?= $isLowStock ? 'text-bg-danger' : 'text-bg-success'; ?>">
+                                    <?= $isLowStock ? 'À réapprovisionner' : 'Disponible'; ?>
+                                </span>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
