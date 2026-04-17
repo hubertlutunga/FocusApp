@@ -65,8 +65,9 @@ $paymentMethodValue = old('payment_method', (string) ($procurement['payment_meth
                 <select class="form-select" id="status" name="status">
                     <option value="draft" <?= $statusValue === 'draft' ? 'selected' : ''; ?>>Brouillon</option>
                     <option value="ordered" <?= $statusValue === 'ordered' ? 'selected' : ''; ?>>Commandé</option>
-                    <?php if (!$editing): ?>
-                        <option value="received" <?= $statusValue === 'received' ? 'selected' : ''; ?>>Reçu immédiatement</option>
+                    <option value="received" <?= $statusValue === 'received' ? 'selected' : ''; ?>>Reçu</option>
+                    <?php if ($editing): ?>
+                        <option value="cancelled" <?= $statusValue === 'cancelled' ? 'selected' : ''; ?>>Annulé</option>
                     <?php endif; ?>
                 </select>
             </div>

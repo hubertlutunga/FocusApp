@@ -161,10 +161,6 @@ final class Procurement extends Model
                 throw new RuntimeException('Approvisionnement introuvable.');
             }
 
-            if (in_array((string) $existing['status'], ['received', 'cancelled'], true)) {
-                throw new RuntimeException('Seuls les approvisionnements non reçus peuvent être modifiés.');
-            }
-
             $creditSchemaEnabled = $this->supportsCreditTracking();
             if (!$creditSchemaEnabled && $header['payment_method'] === 'credit') {
                 throw new RuntimeException('La base de donnees doit etre migree avant d utiliser les approvisionnements a credit.');
@@ -174,11 +170,27 @@ final class Procurement extends Model
                 throw new RuntimeException('Cet approvisionnement ne peut plus être modifié car des règlements ont déjà été enregistrés.');
             }
 
+            $existingItems = $this->items($id);
+            $wasReceived = (string) ($existing['status'] ?? '') === 'received';
+            $willBeReceived = (string) ($header['status'] ?? '') === 'received';
+
+            if ($wasReceived) {
+                $this->reverseReceipt($existingItems, $id, (int) $header['user_id']);
+            }
+
+            $receivedDate = null;
+            if ($willBeReceived) {
+                $receivedDate = (string) ($existing['received_date'] ?? '') !== ''
+                    ? (string) $existing['received_date']
+                    : date('Y-m-d');
+            }
+
             if ($creditSchemaEnabled) {
                 $statement = $this->db->prepare('UPDATE procurements SET
                         supplier_id = :supplier_id,
                         procurement_date = :procurement_date,
                         expected_date = :expected_date,
+                        received_date = :received_date,
                         status = :status,
                         payment_method = :payment_method,
                         payment_status = :payment_status,
@@ -197,6 +209,7 @@ final class Procurement extends Model
                     'supplier_id' => $header['supplier_id'],
                     'procurement_date' => $header['procurement_date'],
                     'expected_date' => $header['expected_date'],
+                    'received_date' => $receivedDate,
                     'status' => $header['status'],
                     'payment_method' => $header['payment_method'],
                     'payment_status' => $header['payment_method'] === 'credit' ? 'unpaid' : 'paid',
@@ -214,6 +227,7 @@ final class Procurement extends Model
                         supplier_id = :supplier_id,
                         procurement_date = :procurement_date,
                         expected_date = :expected_date,
+                    received_date = :received_date,
                         status = :status,
                         subtotal = :subtotal,
                         discount_amount = :discount_amount,
@@ -227,6 +241,7 @@ final class Procurement extends Model
                     'supplier_id' => $header['supplier_id'],
                     'procurement_date' => $header['procurement_date'],
                     'expected_date' => $header['expected_date'],
+                    'received_date' => $receivedDate,
                     'status' => $header['status'],
                     'subtotal' => $header['subtotal'],
                     'discount_amount' => $header['discount_amount'],
@@ -250,6 +265,10 @@ final class Procurement extends Model
                     'unit_cost' => $item['unit_cost'],
                     'line_total' => $item['line_total'],
                 ]);
+            }
+
+            if ($willBeReceived) {
+                $this->applyReceipt($id, (int) $header['user_id']);
             }
 
             if ($creditSchemaEnabled) {
@@ -412,6 +431,37 @@ final class Procurement extends Model
                 'reference_type' => 'procurement',
                 'reference_id' => $procurementId,
                 'note' => 'Réception approvisionnement #' . $procurementId,
+                'movement_date' => date('Y-m-d H:i:s'),
+                'created_by' => $userId,
+            ]);
+        }
+    }
+
+    private function reverseReceipt(array $items, int $procurementId, int $userId): void
+    {
+        $productModel = new Product();
+        $movementModel = new StockMovement();
+
+        foreach ($items as $item) {
+            $product = $productModel->find((int) $item['product_id']);
+            if (!$product) {
+                continue;
+            }
+
+            $before = (float) $product['current_stock'];
+            $quantity = (float) $item['quantity'];
+            $after = $before - $quantity;
+
+            $productModel->adjustStock((int) $product['id'], $after);
+            $movementModel->create([
+                'product_id' => (int) $product['id'],
+                'movement_type' => 'adjustment',
+                'quantity' => -$quantity,
+                'quantity_before' => $before,
+                'quantity_after' => $after,
+                'reference_type' => 'procurement',
+                'reference_id' => $procurementId,
+                'note' => 'Annulation technique de la réception avant modification approvisionnement #' . $procurementId,
                 'movement_date' => date('Y-m-d H:i:s'),
                 'created_by' => $userId,
             ]);

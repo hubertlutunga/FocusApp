@@ -108,11 +108,6 @@ final class ProcurementController extends Controller
             $this->redirect('/procurements');
         }
 
-        if (in_array((string) $procurement['status'], ['received', 'cancelled'], true)) {
-            Session::flash('alert', ['icon' => 'error', 'title' => 'Modification impossible', 'text' => 'Cet approvisionnement ne peut plus être modifié.']);
-            $this->redirect('/procurements');
-        }
-
         $this->renderForm($procurement);
     }
 
