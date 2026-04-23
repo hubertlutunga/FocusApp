@@ -633,7 +633,7 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
         </div>
     </div>
     <div class="col-md-6 col-xl-4">
-        <div class="card metric-card h-100 admin-metric-card admin-metric-card-debt is-<?= e($debtState); ?>">
+        <a href="<?= e(url('/clients?debtors=1')); ?>" class="card metric-card h-100 admin-metric-card admin-metric-card-debt is-<?= e($debtState); ?> text-decoration-none text-reset">
             <div class="card-body d-flex align-items-center gap-3">
                 <span class="metric-icon <?= e($debtIconClass); ?>"><i class="bi bi-hourglass-split"></i></span>
                 <div>
@@ -642,7 +642,7 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
                     <small class="metric-subnote <?= $debtState === 'critical' ? 'text-danger' : ($debtState === 'alert' ? 'text-warning' : 'text-success'); ?>"><?= e($debtStateLabel); ?> · <?= e((string) ($adminOverview['outstanding_count'] ?? 0)); ?> facture(s)</small>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-6 col-xl-4">
         <div class="card metric-card h-100 admin-metric-card">

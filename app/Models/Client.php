@@ -8,9 +8,31 @@ use App\Core\Model;
 
 final class Client extends Model
 {
-    public function all(): array
+    public function all(bool $onlyDebtors = false): array
     {
-        $statement = $this->db->query('SELECT * FROM clients WHERE deleted_at IS NULL ORDER BY id DESC');
+        $sql = "SELECT c.*, 
+                       COALESCE(SUM(CASE 
+                           WHEN i.deleted_at IS NULL 
+                            AND i.status IN ('validated', 'partial_paid') 
+                            AND i.balance_due > 0
+                           THEN i.balance_due
+                           ELSE 0
+                       END), 0) AS outstanding_balance,
+                       COALESCE(SUM(CASE 
+                           WHEN i.deleted_at IS NULL 
+                            AND i.status IN ('validated', 'partial_paid') 
+                            AND i.balance_due > 0
+                           THEN 1
+                           ELSE 0
+                       END), 0) AS outstanding_invoice_count
+                FROM clients c
+                LEFT JOIN invoices i ON i.client_id = c.id
+                WHERE c.deleted_at IS NULL
+                GROUP BY c.id
+                " . ($onlyDebtors ? 'HAVING outstanding_balance > 0 ' : '') . '
+                ORDER BY outstanding_balance DESC, c.id DESC';
+
+        $statement = $this->db->query($sql);
         return $statement->fetchAll();
     }
 

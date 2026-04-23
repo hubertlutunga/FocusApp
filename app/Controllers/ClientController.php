@@ -16,9 +16,12 @@ final class ClientController extends Controller
 {
     public function index(): void
     {
+        $onlyDebtors = (string) ($_GET['debtors'] ?? '') === '1';
+
         $this->render('clients.index', [
-            'pageTitle' => 'Clients',
-            'clients' => (new Client())->all(),
+            'pageTitle' => $onlyDebtors ? 'Clients endettes' : 'Clients',
+            'clients' => (new Client())->all($onlyDebtors),
+            'onlyDebtors' => $onlyDebtors,
         ]);
     }
 
