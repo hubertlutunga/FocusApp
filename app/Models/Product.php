@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Model;
+use PDO;
 
 final class Product extends Model
 {
@@ -38,6 +39,215 @@ final class Product extends Model
     {
         $statement = $this->db->query('SELECT id, sku, name, current_stock, minimum_stock FROM products WHERE deleted_at IS NULL AND is_active = 1 AND current_stock <= minimum_stock ORDER BY current_stock ASC, name ASC');
         return $statement->fetchAll();
+    }
+
+    public function salesAnalysis(string $dateFrom, string $dateTo, ?int $productId = null): array
+    {
+        $periodSummaryStatement = $this->db->prepare(
+            "SELECT
+                (
+                    SELECT COUNT(*)
+                    FROM invoices i
+                    WHERE i.deleted_at IS NULL
+                      AND i.status IN ('validated', 'partial_paid', 'paid')
+                      AND i.invoice_date BETWEEN :date_from_invoices AND :date_to_invoices
+                ) AS invoice_count,
+                (
+                    SELECT COALESCE(SUM(i.grand_total), 0)
+                    FROM invoices i
+                    WHERE i.deleted_at IS NULL
+                      AND i.status IN ('validated', 'partial_paid', 'paid')
+                      AND i.invoice_date BETWEEN :date_from_sales AND :date_to_sales
+                ) AS total_sales,
+                (
+                    SELECT COALESCE(SUM(ii.quantity), 0)
+                    FROM invoice_items ii
+                    INNER JOIN invoices i ON i.id = ii.invoice_id
+                    WHERE i.deleted_at IS NULL
+                      AND i.status IN ('validated', 'partial_paid', 'paid')
+                      AND ii.item_type = 'product'
+                      AND i.invoice_date BETWEEN :date_from_products AND :date_to_products
+                ) AS product_quantity_sold,
+                (
+                    SELECT COALESCE(SUM(ii.line_total), 0)
+                    FROM invoice_items ii
+                    INNER JOIN invoices i ON i.id = ii.invoice_id
+                    WHERE i.deleted_at IS NULL
+                      AND i.status IN ('validated', 'partial_paid', 'paid')
+                      AND ii.item_type = 'product'
+                      AND i.invoice_date BETWEEN :date_from_product_amount AND :date_to_product_amount
+                ) AS product_sales_amount"
+        );
+        $periodSummaryStatement->execute([
+            'date_from_invoices' => $dateFrom,
+            'date_to_invoices' => $dateTo,
+            'date_from_sales' => $dateFrom,
+            'date_to_sales' => $dateTo,
+            'date_from_products' => $dateFrom,
+            'date_to_products' => $dateTo,
+            'date_from_product_amount' => $dateFrom,
+            'date_to_product_amount' => $dateTo,
+        ]);
+
+        $topProductsStatement = $this->db->prepare(
+            "SELECT p.id,
+                    p.sku,
+                    p.name,
+                    u.symbol AS unit_symbol,
+                    COALESCE(SUM(ii.quantity), 0) AS quantity_sold,
+                    COALESCE(SUM(ii.line_total), 0) AS revenue
+             FROM invoice_items ii
+             INNER JOIN invoices i ON i.id = ii.invoice_id
+             INNER JOIN products p ON p.id = ii.product_id
+             INNER JOIN units u ON u.id = p.unit_id
+             WHERE i.deleted_at IS NULL
+               AND i.status IN ('validated', 'partial_paid', 'paid')
+               AND ii.item_type = 'product'
+               AND i.invoice_date BETWEEN :date_from AND :date_to
+             GROUP BY p.id, p.sku, p.name, u.symbol
+             ORDER BY quantity_sold DESC, revenue DESC, p.name ASC
+             LIMIT 5"
+        );
+        $topProductsStatement->execute([
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ]);
+
+        $analysis = [
+            'period_summary' => $periodSummaryStatement->fetch() ?: [
+                'invoice_count' => 0,
+                'total_sales' => 0,
+                'product_quantity_sold' => 0,
+                'product_sales_amount' => 0,
+            ],
+            'top_products' => $topProductsStatement->fetchAll(),
+            'selected_product' => null,
+            'product_summary' => null,
+            'product_sales' => [],
+        ];
+
+        if ($productId === null) {
+            return $analysis;
+        }
+
+        $productStatement = $this->db->prepare('SELECT p.*, c.name AS category_name, u.name AS unit_name, u.symbol AS unit_symbol
+                FROM products p
+                INNER JOIN categories c ON c.id = p.category_id
+                INNER JOIN units u ON u.id = p.unit_id
+                WHERE p.id = :id AND p.deleted_at IS NULL
+                LIMIT 1');
+        $productStatement->execute(['id' => $productId]);
+        $selectedProduct = $productStatement->fetch();
+
+        if (!$selectedProduct) {
+            return $analysis;
+        }
+
+        $periodStart = $dateFrom . ' 00:00:00';
+        $periodEndExclusive = date('Y-m-d H:i:s', strtotime($dateTo . ' +1 day'));
+
+        $productSummaryStatement = $this->db->prepare(
+            "SELECT COUNT(DISTINCT i.id) AS invoice_count,
+                    COALESCE(SUM(ii.quantity), 0) AS quantity_sold,
+                    COALESCE(SUM(ii.line_total), 0) AS revenue,
+                    COALESCE(MIN(i.invoice_date), '') AS first_sale_date,
+                    COALESCE(MAX(i.invoice_date), '') AS last_sale_date
+             FROM invoice_items ii
+             INNER JOIN invoices i ON i.id = ii.invoice_id
+             WHERE i.deleted_at IS NULL
+               AND i.status IN ('validated', 'partial_paid', 'paid')
+               AND ii.item_type = 'product'
+               AND ii.product_id = :product_id
+               AND i.invoice_date BETWEEN :date_from AND :date_to"
+        );
+        $productSummaryStatement->execute([
+            'product_id' => $productId,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ]);
+        $productSummary = $productSummaryStatement->fetch() ?: [];
+
+        $movementSummaryStatement = $this->db->prepare(
+            "SELECT COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END), 0) AS entries_quantity,
+                    COALESCE(SUM(CASE WHEN quantity < 0 THEN ABS(quantity) ELSE 0 END), 0) AS exits_quantity,
+                    COALESCE(SUM(quantity), 0) AS net_quantity
+             FROM stock_movements
+             WHERE product_id = :product_id
+               AND movement_date >= :period_start
+               AND movement_date < :period_end_exclusive"
+        );
+        $movementSummaryStatement->execute([
+            'product_id' => $productId,
+            'period_start' => $periodStart,
+            'period_end_exclusive' => $periodEndExclusive,
+        ]);
+        $movementSummary = $movementSummaryStatement->fetch() ?: [];
+
+        $stockStartAdjustmentStatement = $this->db->prepare(
+            'SELECT COALESCE(SUM(quantity), 0) FROM stock_movements WHERE product_id = :product_id AND movement_date >= :period_start'
+        );
+        $stockStartAdjustmentStatement->execute([
+            'product_id' => $productId,
+            'period_start' => $periodStart,
+        ]);
+        $stockStartAdjustment = (float) $stockStartAdjustmentStatement->fetchColumn();
+
+        $stockEndAdjustmentStatement = $this->db->prepare(
+            'SELECT COALESCE(SUM(quantity), 0) FROM stock_movements WHERE product_id = :product_id AND movement_date >= :period_end_exclusive'
+        );
+        $stockEndAdjustmentStatement->execute([
+            'product_id' => $productId,
+            'period_end_exclusive' => $periodEndExclusive,
+        ]);
+        $stockEndAdjustment = (float) $stockEndAdjustmentStatement->fetchColumn();
+
+        $productSalesStatement = $this->db->prepare(
+            "SELECT i.id,
+                    i.invoice_number,
+                    i.invoice_date,
+                    c.company_name AS client_name,
+                    ii.quantity,
+                    ii.unit_price,
+                    ii.line_total
+             FROM invoice_items ii
+             INNER JOIN invoices i ON i.id = ii.invoice_id
+             INNER JOIN clients c ON c.id = i.client_id
+             WHERE i.deleted_at IS NULL
+               AND i.status IN ('validated', 'partial_paid', 'paid')
+               AND ii.item_type = 'product'
+               AND ii.product_id = :product_id
+               AND i.invoice_date BETWEEN :date_from AND :date_to
+             ORDER BY i.invoice_date DESC, i.id DESC
+             LIMIT 12"
+        );
+        $productSalesStatement->bindValue(':product_id', $productId, PDO::PARAM_INT);
+        $productSalesStatement->bindValue(':date_from', $dateFrom);
+        $productSalesStatement->bindValue(':date_to', $dateTo);
+        $productSalesStatement->execute();
+
+        $currentStock = (float) ($selectedProduct['current_stock'] ?? 0);
+        $quantitySold = (float) ($productSummary['quantity_sold'] ?? 0);
+        $revenue = (float) ($productSummary['revenue'] ?? 0);
+
+        $analysis['selected_product'] = $selectedProduct;
+        $analysis['product_summary'] = [
+            'invoice_count' => (int) ($productSummary['invoice_count'] ?? 0),
+            'quantity_sold' => $quantitySold,
+            'revenue' => $revenue,
+            'average_unit_price' => $quantitySold > 0 ? ($revenue / $quantitySold) : 0,
+            'entries_quantity' => (float) ($movementSummary['entries_quantity'] ?? 0),
+            'exits_quantity' => (float) ($movementSummary['exits_quantity'] ?? 0),
+            'net_quantity' => (float) ($movementSummary['net_quantity'] ?? 0),
+            'stock_start' => $currentStock - $stockStartAdjustment,
+            'stock_end' => $currentStock - $stockEndAdjustment,
+            'current_stock' => $currentStock,
+            'minimum_stock' => (float) ($selectedProduct['minimum_stock'] ?? 0),
+            'first_sale_date' => (string) ($productSummary['first_sale_date'] ?? ''),
+            'last_sale_date' => (string) ($productSummary['last_sale_date'] ?? ''),
+        ];
+        $analysis['product_sales'] = $productSalesStatement->fetchAll();
+
+        return $analysis;
     }
 
     public function create(array $data): void

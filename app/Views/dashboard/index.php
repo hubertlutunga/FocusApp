@@ -46,6 +46,8 @@
     </div>
 </div>
 
+<?php require view_path('partials.dashboard_sales_analysis'); ?>
+
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
         <div>
@@ -304,6 +306,8 @@
                 </div>
             </div>
         </div>
+
+        <?php require view_path('partials.dashboard_sales_analysis'); ?>
 
         <div class="row g-4 mb-4">
             <div class="col-lg-8">
@@ -669,6 +673,8 @@ $debtIconClass = $debtState === 'critical' ? 'danger' : ($debtState === 'alert' 
         </div>
     </div>
 </div>
+
+<?php require view_path('partials.dashboard_sales_analysis'); ?>
 
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
@@ -1038,4 +1044,7 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
     </div>
 </div>
+
+<?php require view_path('partials.dashboard_sales_analysis'); ?>
+
 <?php endif; ?>

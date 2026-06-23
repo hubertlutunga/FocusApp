@@ -9,6 +9,7 @@ use App\Core\Controller;
 use App\Core\Database;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
+use App\Models\Product;
 use App\Models\Report;
 use App\Models\StockMovement;
 use PDOException;
@@ -23,6 +24,16 @@ final class DashboardController extends Controller
         $isStockDashboard = Auth::hasRole(['gestionnaire_stock']) && !$isCashierDashboard && !$isAdminDashboard;
         $salesDateFrom = trim((string) ($_GET['sales_date_from'] ?? ''));
         $salesDateTo = trim((string) ($_GET['sales_date_to'] ?? ''));
+        $analysisDateFrom = $this->normalizeFilterDate((string) ($_GET['analysis_date_from'] ?? ''), date('Y-m-01'));
+        $analysisDateTo = $this->normalizeFilterDate((string) ($_GET['analysis_date_to'] ?? ''), date('Y-m-d'));
+        $analysisProductId = $this->normalizeFilterProductId($_GET['analysis_product_id'] ?? null);
+
+        if ($analysisDateFrom > $analysisDateTo) {
+            [$analysisDateFrom, $analysisDateTo] = [$analysisDateTo, $analysisDateFrom];
+        }
+
+        $productModel = new Product();
+        $salesAnalysis = $productModel->salesAnalysis($analysisDateFrom, $analysisDateTo, $analysisProductId);
 
         $stats = [
             'clients' => (int) $db->query('SELECT COUNT(*) FROM clients WHERE deleted_at IS NULL')->fetchColumn(),
@@ -290,6 +301,11 @@ final class DashboardController extends Controller
             'isAdminDashboard' => $isAdminDashboard,
             'isCashierDashboard' => $isCashierDashboard,
             'isStockDashboard' => $isStockDashboard,
+            'analysisDateFrom' => $analysisDateFrom,
+            'analysisDateTo' => $analysisDateTo,
+            'analysisProductId' => $analysisProductId,
+            'analysisProductOptions' => $productModel->options(),
+            'salesAnalysis' => $salesAnalysis,
             'salesDateFrom' => $salesDateFrom,
             'salesDateTo' => $salesDateTo,
             'stats' => $stats,
@@ -305,5 +321,27 @@ final class DashboardController extends Controller
             'chartLabels' => $chartLabels,
             'chartValues' => $chartValues,
         ]);
+    }
+
+    private function normalizeFilterDate(string $value, string $fallback): string
+    {
+        if ($value === '') {
+            return $fallback;
+        }
+
+        $date = \DateTimeImmutable::createFromFormat('Y-m-d', $value);
+
+        return $date && $date->format('Y-m-d') === $value ? $value : $fallback;
+    }
+
+    private function normalizeFilterProductId(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $productId = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+        return $productId === false ? null : (int) $productId;
     }
 }
