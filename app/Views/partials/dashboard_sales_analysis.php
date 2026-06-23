@@ -8,7 +8,7 @@ $productSales = $analysis['product_sales'] ?? [];
 $selectedProductMissing = !empty($analysisProductId) && $selectedProduct === null;
 ?>
 
-<div class="card border-0 shadow-sm mt-4">
+<div class="card border-0 shadow-sm mt-4 mb-4">
     <div class="card-header bg-white border-0 pt-4 px-4">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
             <div>
