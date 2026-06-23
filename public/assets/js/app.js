@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
+    const select2Selector = 'select';
     const appShell = document.body;
     const sidebar = document.getElementById('appSidebar');
     const sidebarOverlay = document.querySelector('[data-sidebar-overlay]');
@@ -69,6 +70,70 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (typeof mobileSidebarQuery.addListener === 'function') {
         mobileSidebarQuery.addListener(syncSidebarOnResize);
     }
+
+    const initializeSelect2 = function (context) {
+        if (!window.jQuery || !window.jQuery.fn || typeof window.jQuery.fn.select2 !== 'function') {
+            return;
+        }
+
+        const root = context instanceof Element || context instanceof Document ? context : document;
+        const selects = root.matches && root.matches(select2Selector)
+            ? [root]
+            : Array.from(root.querySelectorAll(select2Selector));
+
+        selects.forEach(function (select) {
+            if (!(select instanceof HTMLSelectElement) || select.dataset.select2Off === 'true') {
+                return;
+            }
+
+            const $select = window.jQuery(select);
+
+            if ($select.hasClass('select2-hidden-accessible')) {
+                return;
+            }
+
+            const firstOption = select.options.length > 0 ? select.options[0] : null;
+            const hasEmptyOption = firstOption && firstOption.value === '';
+            const placeholder = select.dataset.placeholder || (hasEmptyOption ? firstOption.textContent.trim() : 'Rechercher...');
+            const modalParent = select.closest('.modal');
+
+            $select.select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: placeholder,
+                allowClear: !select.required && hasEmptyOption,
+                closeOnSelect: !select.multiple,
+                dropdownParent: modalParent ? window.jQuery(modalParent) : window.jQuery(document.body)
+            });
+        });
+    };
+
+    initializeSelect2(document);
+
+    const selectObserver = new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+            mutation.addedNodes.forEach(function (node) {
+                if (!(node instanceof Element)) {
+                    return;
+                }
+
+                initializeSelect2(node);
+            });
+        });
+    });
+
+    selectObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    document.addEventListener('shown.bs.modal', function (event) {
+        if (!(event.target instanceof Element)) {
+            return;
+        }
+
+        initializeSelect2(event.target);
+    });
 
     const tableSelector = '.js-datatable, .datatable';
     const dataTablesRegistry = new Map();

@@ -223,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
             option.selected = true;
             supplierSelect.appendChild(option);
             supplierSelect.value = option.value;
+            supplierSelect.dispatchEvent(new Event('change', { bubbles: true }));
 
             supplierForm.reset();
             supplierModal.hide();
