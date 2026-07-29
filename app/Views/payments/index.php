@@ -21,7 +21,7 @@
                                     <div class="table-cell-meta"><?= e(date('d/m/Y', strtotime((string) $payment['payment_date']))); ?> • <?= e(payment_method_label($payment['method'])); ?> • <?= e($payment['user_name']); ?></div>
                                 </div>
                             </td>
-                            <td><?= e(number_format((float) $payment['amount'], 2, ',', ' ')); ?></td>
+                            <td><?= e(format_money($payment['amount'], $payment['currency_code'] ?? 'USD')); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -33,7 +33,7 @@
                 <div>Aucune facture à encaisser.</div>
             <?php else: ?>
                 <?php foreach ($openInvoices as $invoice): ?>
-                    <div><?= e($invoice['invoice_number'] . ' — ' . $invoice['client_name'] . ' — Solde : ' . number_format((float) $invoice['balance_due'], 2, ',', ' ')); ?></div>
+                    <div><?= e($invoice['invoice_number'] . ' — ' . $invoice['client_name'] . ' — Solde : ' . format_money($invoice['balance_due'], $invoice['currency_code'] ?? 'USD')); ?></div>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>

@@ -11,10 +11,11 @@ final class Invoice extends Model
 {
     public function all(): array
     {
-        $sql = 'SELECT i.*, c.company_name AS client_name, u.full_name AS user_name
+        $sql = 'SELECT i.*, c.company_name AS client_name, u.full_name AS user_name, s.name AS shop_name
                 FROM invoices i
                 INNER JOIN clients c ON c.id = i.client_id
                 INNER JOIN users u ON u.id = i.created_by
+            LEFT JOIN shops s ON s.id = i.shop_id
                 WHERE i.deleted_at IS NULL
                 ORDER BY i.id DESC';
 
@@ -23,11 +24,12 @@ final class Invoice extends Model
 
     public function find(int $id): ?array
     {
-        $sql = 'SELECT i.*, c.company_name AS client_name, c.contact_name, c.email AS client_email, c.phone AS client_phone, c.address AS client_address, c.city AS client_city, q.quote_number, u.full_name AS user_name
+        $sql = 'SELECT i.*, c.company_name AS client_name, c.contact_name, c.email AS client_email, c.phone AS client_phone, c.address AS client_address, c.city AS client_city, q.quote_number, u.full_name AS user_name, s.name AS shop_name, s.code AS shop_code
                 FROM invoices i
                 INNER JOIN clients c ON c.id = i.client_id
                 LEFT JOIN quotes q ON q.id = i.quote_id
                 INNER JOIN users u ON u.id = i.created_by
+            LEFT JOIN shops s ON s.id = i.shop_id
                 WHERE i.id = :id AND i.deleted_at IS NULL
                 LIMIT 1';
         $statement = $this->db->prepare($sql);
@@ -51,7 +53,7 @@ final class Invoice extends Model
 
     public function payableOptions(): array
     {
-        $sql = "SELECT i.id, i.invoice_number, i.balance_due, c.company_name AS client_name
+        $sql = "SELECT i.id, i.invoice_number, i.balance_due, i.currency_code, c.company_name AS client_name
                 FROM invoices i
                 INNER JOIN clients c ON c.id = i.client_id
                 WHERE i.deleted_at IS NULL
@@ -67,8 +69,8 @@ final class Invoice extends Model
         $this->db->beginTransaction();
 
         try {
-            $statement = $this->db->prepare('INSERT INTO invoices (quote_id, client_id, invoice_number, invoice_date, due_date, status, subtotal, discount_amount, tax_rate, tax_amount, grand_total, amount_paid, balance_due, notes, validated_at, cancelled_at, created_by, validated_by, deleted_at, created_at, updated_at)
-                VALUES (:quote_id, :client_id, :invoice_number, :invoice_date, :due_date, :status, :subtotal, :discount_amount, :tax_rate, :tax_amount, :grand_total, :amount_paid, :balance_due, :notes, :validated_at, :cancelled_at, :created_by, :validated_by, NULL, NOW(), NOW())');
+            $statement = $this->db->prepare('INSERT INTO invoices (quote_id, shop_id, client_id, invoice_number, invoice_date, due_date, status, currency_code, subtotal, discount_amount, tax_rate, tax_amount, grand_total, amount_paid, balance_due, notes, validated_at, cancelled_at, created_by, validated_by, deleted_at, created_at, updated_at)
+                VALUES (:quote_id, :shop_id, :client_id, :invoice_number, :invoice_date, :due_date, :status, :currency_code, :subtotal, :discount_amount, :tax_rate, :tax_amount, :grand_total, :amount_paid, :balance_due, :notes, :validated_at, :cancelled_at, :created_by, :validated_by, NULL, NOW(), NOW())');
             $statement->execute($header);
             $invoiceId = (int) $this->db->lastInsertId();
 
@@ -111,11 +113,13 @@ final class Invoice extends Model
 
         $header = [
             'quote_id' => $quoteId,
+            'shop_id' => current_user_shop_id(),
             'client_id' => (int) $quote['client_id'],
             'invoice_number' => $invoiceNumber,
             'invoice_date' => $invoiceDate,
             'due_date' => $dueDate,
             'status' => 'draft',
+            'currency_code' => normalize_currency_code((new CompanySetting())->first()['currency_code'] ?? 'USD'),
             'subtotal' => (float) $quote['subtotal'],
             'discount_amount' => (float) $quote['discount_amount'],
             'tax_rate' => (float) ($quote['tax_rate'] ?? 0),
@@ -161,6 +165,7 @@ final class Invoice extends Model
             $items = $this->items($id);
             $productModel = new Product();
             $movementModel = new StockMovement();
+            $shopId = !empty($invoice['shop_id']) ? (int) $invoice['shop_id'] : null;
 
             foreach ($items as $item) {
                 if ($item['item_type'] !== 'product' || !$item['product_id']) {
@@ -172,7 +177,7 @@ final class Invoice extends Model
                     continue;
                 }
 
-                $before = (float) $product['current_stock'];
+                $before = $productModel->stockForLocation((int) $product['id'], $shopId);
                 $quantity = (float) $item['quantity'];
                 $after = $before - $quantity;
 
@@ -180,13 +185,20 @@ final class Invoice extends Model
                     throw new \RuntimeException('Stock insuffisant pour ' . $product['name']);
                 }
 
-                $productModel->adjustStock((int) $product['id'], $after);
+                if ($shopId !== null) {
+                    $productModel->adjustShopStock((int) $product['id'], $shopId, $after);
+                } else {
+                    $productModel->adjustStock((int) $product['id'], $after);
+                }
+
                 $movementModel->create([
                     'product_id' => (int) $product['id'],
                     'movement_type' => 'invoice_validation',
                     'quantity' => -$quantity,
                     'quantity_before' => $before,
                     'quantity_after' => $after,
+                    'source_shop_id' => $shopId,
+                    'destination_shop_id' => null,
                     'reference_type' => 'invoice',
                     'reference_id' => $id,
                     'note' => 'Validation facture #' . $id,
@@ -227,6 +239,7 @@ final class Invoice extends Model
                 $items = $this->items($id);
                 $productModel = new Product();
                 $movementModel = new StockMovement();
+                $shopId = !empty($invoice['shop_id']) ? (int) $invoice['shop_id'] : null;
 
                 foreach ($items as $item) {
                     if ($item['item_type'] !== 'product' || !$item['product_id']) {
@@ -238,17 +251,24 @@ final class Invoice extends Model
                         continue;
                     }
 
-                    $before = (float) $product['current_stock'];
+                    $before = $productModel->stockForLocation((int) $product['id'], $shopId);
                     $quantity = (float) $item['quantity'];
                     $after = $before + $quantity;
 
-                    $productModel->adjustStock((int) $product['id'], $after);
+                    if ($shopId !== null) {
+                        $productModel->adjustShopStock((int) $product['id'], $shopId, $after);
+                    } else {
+                        $productModel->adjustStock((int) $product['id'], $after);
+                    }
+
                     $movementModel->create([
                         'product_id' => (int) $product['id'],
                         'movement_type' => 'invoice_cancellation',
                         'quantity' => $quantity,
                         'quantity_before' => $before,
                         'quantity_after' => $after,
+                        'source_shop_id' => null,
+                        'destination_shop_id' => $shopId,
                         'reference_type' => 'invoice',
                         'reference_id' => $id,
                         'note' => 'Annulation facture #' . $id,

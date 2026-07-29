@@ -70,6 +70,7 @@ final class PaymentController extends Controller
             Session::forget('old_input');
 
             if ($expectsJson) {
+                $currencyCode = $invoice['currency_code'] ?? 'USD';
                 $this->respondJson([
                     'success' => true,
                     'message' => 'Le paiement a été enregistré avec succès.',
@@ -85,8 +86,8 @@ final class PaymentController extends Controller
                         'status_class' => status_badge_class((string) ($invoice['status'] ?? '')),
                         'amount_paid' => (float) ($invoice['amount_paid'] ?? 0),
                         'balance_due' => (float) ($invoice['balance_due'] ?? 0),
-                        'amount_paid_label' => number_format((float) ($invoice['amount_paid'] ?? 0), 2, ',', ' '),
-                        'balance_due_label' => number_format((float) ($invoice['balance_due'] ?? 0), 2, ',', ' '),
+                        'amount_paid_label' => format_money($invoice['amount_paid'] ?? 0, $currencyCode),
+                        'balance_due_label' => format_money($invoice['balance_due'] ?? 0, $currencyCode),
                     ],
                 ]);
             }

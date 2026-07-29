@@ -1,3 +1,4 @@
+<?php $invoiceCurrency = normalize_currency_code($invoice['currency_code'] ?? 'USD'); ?>
 <div class="document-shell">
     <div class="document-hero invoice-document-hero mb-4">
         <div>
@@ -9,7 +10,7 @@
             <span class="badge <?= e(status_badge_class($invoice['status'])); ?> document-status-badge"><?= e(status_label($invoice['status'])); ?></span>
             <div class="document-total-card">
                 <span>Total TTC</span>
-                <strong><?= e(number_format((float) $invoice['grand_total'], 2, ',', ' ')); ?></strong>
+                <strong><?= e(format_money($invoice['grand_total'], $invoiceCurrency)); ?></strong>
             </div>
         </div>
     </div>
@@ -62,12 +63,22 @@
                                         <dd><?= e($invoice['user_name']); ?></dd>
                                     </div>
                                     <div>
+                                        <dt>Devise</dt>
+                                        <dd><?= e(currency_symbol($invoiceCurrency)); ?></dd>
+                                    </div>
+                                    <?php if (!empty($invoice['shop_name'])): ?>
+                                    <div>
+                                        <dt>Boutique</dt>
+                                        <dd><?= e($invoice['shop_name']); ?></dd>
+                                    </div>
+                                    <?php endif; ?>
+                                    <div>
                                         <dt>Montant payé</dt>
-                                        <dd><?= e(number_format((float) $invoice['amount_paid'], 2, ',', ' ')); ?></dd>
+                                        <dd><?= e(format_money($invoice['amount_paid'], $invoiceCurrency)); ?></dd>
                                     </div>
                                     <div>
                                         <dt>Solde restant</dt>
-                                        <dd class="text-danger fw-semibold"><?= e(number_format((float) $invoice['balance_due'], 2, ',', ' ')); ?></dd>
+                                        <dd class="text-danger fw-semibold"><?= e(format_money($invoice['balance_due'], $invoiceCurrency)); ?></dd>
                                     </div>
                                 </dl>
                             </div>
@@ -90,8 +101,8 @@
                                         </td>
                                         <td><?= e($item['item_type']); ?></td>
                                         <td><?= e(number_format((float) $item['quantity'], 2, ',', ' ')); ?></td>
-                                        <td><?= e(number_format((float) $item['unit_price'], 2, ',', ' ')); ?></td>
-                                        <td class="fw-semibold"><?= e(number_format((float) $item['line_total'], 2, ',', ' ')); ?></td>
+                                        <td><?= e(format_money($item['unit_price'], $invoiceCurrency)); ?></td>
+                                        <td class="fw-semibold"><?= e(format_money($item['line_total'], $invoiceCurrency)); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -105,10 +116,10 @@
                 <div class="card-body p-4">
                     <div class="document-section-label">Récapitulatif</div>
                     <div class="document-summary-grid">
-                        <div><span>Sous-total</span><strong><?= e(number_format((float) $invoice['subtotal'], 2, ',', ' ')); ?></strong></div>
-                        <div><span>Remise</span><strong><?= e(number_format((float) $invoice['discount_amount'], 2, ',', ' ')); ?></strong></div>
-                        <div><span><?= e(tax_rate_label($invoice['tax_rate'] ?? 0)); ?></span><strong><?= e(number_format((float) $invoice['tax_amount'], 2, ',', ' ')); ?></strong></div>
-                        <div class="highlight"><span>Total TTC</span><strong><?= e(number_format((float) $invoice['grand_total'], 2, ',', ' ')); ?></strong></div>
+                        <div><span>Sous-total</span><strong><?= e(format_money($invoice['subtotal'], $invoiceCurrency)); ?></strong></div>
+                        <div><span>Remise</span><strong><?= e(format_money($invoice['discount_amount'], $invoiceCurrency)); ?></strong></div>
+                        <div><span><?= e(tax_rate_label($invoice['tax_rate'] ?? 0)); ?></span><strong><?= e(format_money($invoice['tax_amount'], $invoiceCurrency)); ?></strong></div>
+                        <div class="highlight"><span>Total TTC</span><strong><?= e(format_money($invoice['grand_total'], $invoiceCurrency)); ?></strong></div>
                     </div>
                     <?php if (!empty($invoice['notes'])): ?>
                         <div class="document-note mt-4">
@@ -160,7 +171,7 @@
                                 <tr>
                                     <td><?= e($payment['payment_number']); ?></td>
                                     <td><?= e(date('d/m/Y', strtotime((string) $payment['payment_date']))); ?></td>
-                                    <td class="fw-semibold"><?= e(number_format((float) $payment['amount'], 2, ',', ' ')); ?></td>
+                                    <td class="fw-semibold"><?= e(format_money($payment['amount'], $invoiceCurrency)); ?></td>
                                     <td><span class="badge <?= e(payment_method_badge_class($payment['method'])); ?>"><?= e(payment_method_label($payment['method'])); ?></span></td>
                                     <td><?= e($payment['reference'] ?: '—'); ?></td>
                                     <td><?= e($payment['user_name']); ?></td>

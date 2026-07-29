@@ -17,7 +17,7 @@ $matchesGroup = static function (array $paths) use ($currentPath): bool {
     return false;
 };
 
-$adminPaths = ['/users', '/users/create', '/users/edit', '/settings/company', '/activity-logs'];
+$adminPaths = ['/users', '/users/create', '/users/edit', '/shops', '/shops/create', '/shops/edit', '/settings/company', '/activity-logs'];
 $referencePaths = ['/clients', '/clients/create', '/clients/edit', '/suppliers', '/suppliers/create', '/suppliers/edit', '/categories', '/categories/create', '/categories/edit', '/units', '/units/create', '/units/edit'];
 $stockPaths = ['/products', '/products/create', '/products/edit', '/services', '/services/create', '/services/edit', '/stock', '/procurements', '/procurements/create', '/procurements/show'];
 $commercialPaths = ['/quotes', '/quotes/create', '/quotes/show', '/invoices', '/invoices/create', '/invoices/show', '/payments', '/payments/create'];
@@ -55,6 +55,7 @@ $canAccessStock = user_can_access_stock_management();
             <div class="collapse <?= $adminOpen ? 'show' : '' ?>" id="sidebar-admin">
                 <div class="sidebar-subnav">
                     <a class="nav-link <?= is_active_path(['/users','/users/create','/users/edit']); ?>" href="<?= e(url('/users')); ?>"><i class="bi bi-people"></i><span>Utilisateurs</span></a>
+                    <a class="nav-link <?= is_active_path(['/shops','/shops/create','/shops/edit']); ?>" href="<?= e(url('/shops')); ?>"><i class="bi bi-shop"></i><span>Boutiques</span></a>
                     <a class="nav-link <?= is_active_path(['/settings/company']); ?>" href="<?= e(url('/settings/company')); ?>"><i class="bi bi-building-gear"></i><span>Infos entreprise</span></a>
                     <a class="nav-link <?= is_active_path(['/activity-logs']); ?>" href="<?= e(url('/activity-logs')); ?>"><i class="bi bi-journal-text"></i><span>Journal d’activité</span></a>
                 </div>

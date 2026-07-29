@@ -10,10 +10,11 @@ final class User extends Model
 {
     public function all(): array
     {
-        $sql = 'SELECT u.id, u.role_id, u.full_name, u.email, u.phone, u.is_active, u.last_login_at, u.created_at,
-                       r.name AS role_name, r.code AS role_code
+         $sql = 'SELECT u.id, u.role_id, u.shop_id, u.full_name, u.email, u.phone, u.is_active, u.last_login_at, u.created_at,
+                  r.name AS role_name, r.code AS role_code, s.name AS shop_name, s.code AS shop_code
                 FROM users u
                 INNER JOIN roles r ON r.id = u.role_id
+              LEFT JOIN shops s ON s.id = u.shop_id
                 WHERE u.deleted_at IS NULL
                 ORDER BY u.id DESC';
 
@@ -22,9 +23,11 @@ final class User extends Model
 
     public function findActiveByEmail(string $email): ?array
     {
-        $sql = 'SELECT u.id, u.role_id, u.full_name, u.email, u.password, u.phone, u.is_active, r.name AS role_name, r.code AS role_code
+        $sql = 'SELECT u.id, u.role_id, u.shop_id, u.full_name, u.email, u.password, u.phone, u.is_active,
+                   r.name AS role_name, r.code AS role_code, s.name AS shop_name, s.code AS shop_code
                 FROM users u
                 INNER JOIN roles r ON r.id = u.role_id
+            LEFT JOIN shops s ON s.id = u.shop_id
                 WHERE u.email = :email AND u.deleted_at IS NULL AND u.is_active = 1
                 LIMIT 1';
 
@@ -37,9 +40,11 @@ final class User extends Model
 
     public function findById(int $id): ?array
     {
-        $sql = 'SELECT u.id, u.role_id, u.full_name, u.email, u.phone, u.is_active, r.name AS role_name, r.code AS role_code
+        $sql = 'SELECT u.id, u.role_id, u.shop_id, u.full_name, u.email, u.phone, u.is_active,
+                   r.name AS role_name, r.code AS role_code, s.name AS shop_name, s.code AS shop_code
                 FROM users u
                 INNER JOIN roles r ON r.id = u.role_id
+            LEFT JOIN shops s ON s.id = u.shop_id
                 WHERE u.id = :id AND u.deleted_at IS NULL
                 LIMIT 1';
 
@@ -74,8 +79,8 @@ final class User extends Model
 
     public function createUser(array $data): void
     {
-        $sql = 'INSERT INTO users (role_id, full_name, email, phone, password, is_active, created_at, updated_at)
-                VALUES (:role_id, :full_name, :email, :phone, :password, :is_active, NOW(), NOW())';
+        $sql = 'INSERT INTO users (role_id, shop_id, full_name, email, phone, password, is_active, created_at, updated_at)
+            VALUES (:role_id, :shop_id, :full_name, :email, :phone, :password, :is_active, NOW(), NOW())';
 
         $statement = $this->db->prepare($sql);
         $statement->execute($data);
@@ -85,6 +90,7 @@ final class User extends Model
     {
         $fields = [
             'role_id = :role_id',
+            'shop_id = :shop_id',
             'full_name = :full_name',
             'email = :email',
             'phone = :phone',

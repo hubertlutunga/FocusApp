@@ -21,8 +21,9 @@ final class DocumentPdfService
         $this->renderMeta($pdf, [
             'Date devis' => $quote['quote_date'],
         ]);
-        $this->renderItems($pdf, $items);
-        $this->renderTotals($pdf, (float) $quote['subtotal'], (float) $quote['discount_amount'], tax_rate_label($quote['tax_rate'] ?? 0), (float) $quote['tax_amount'], (float) $quote['grand_total']);
+        $quoteCurrency = normalize_currency_code($company['currency_code'] ?? 'USD');
+        $this->renderItems($pdf, $items, $quoteCurrency);
+        $this->renderTotals($pdf, (float) $quote['subtotal'], (float) $quote['discount_amount'], tax_rate_label($quote['tax_rate'] ?? 0), (float) $quote['tax_amount'], (float) $quote['grand_total'], $quoteCurrency);
         $pdf->Output('I', $quote['quote_number'] . '.pdf');
         exit;
     }
@@ -30,19 +31,21 @@ final class DocumentPdfService
     public function streamInvoice(array $invoice, array $items): never
     {
         $company = (new CompanySetting())->first();
+        $invoiceCurrency = normalize_currency_code($invoice['currency_code'] ?? 'USD');
         $pdf = $this->makePdf($this->buildCompanyFooterLines($company));
         $this->renderHeader($pdf, $company, 'FACTURE', $invoice['invoice_number']);
         $this->renderParty($pdf, $invoice['client_name'], $invoice['client_address'] ?? '', $invoice['client_phone'] ?? '', $invoice['client_email'] ?? '');
         $this->renderMeta($pdf, [
             'Date facture' => $invoice['invoice_date'],
             'Échéance' => $invoice['due_date'] ?: '—',
-            'Solde' => number_format((float) $invoice['balance_due'], 2, ',', ' ') . ' ' . (($company['currency_code'] ?? 'USD')),
+            'Devise' => currency_symbol($invoiceCurrency),
+            'Solde' => format_money($invoice['balance_due'], $invoiceCurrency),
         ]);
-        $this->renderItems($pdf, $items);
-        $this->renderTotals($pdf, (float) $invoice['subtotal'], (float) $invoice['discount_amount'], tax_rate_label($invoice['tax_rate'] ?? 0), (float) $invoice['tax_amount'], (float) $invoice['grand_total']);
+        $this->renderItems($pdf, $items, $invoiceCurrency);
+        $this->renderTotals($pdf, (float) $invoice['subtotal'], (float) $invoice['discount_amount'], tax_rate_label($invoice['tax_rate'] ?? 0), (float) $invoice['tax_amount'], (float) $invoice['grand_total'], $invoiceCurrency);
         $pdf->Ln(4);
         $pdf->SetFont('Arial', 'B', 11);
-        $pdf->Cell(0, 8, $this->pdfText('Montant payé : ') . number_format((float) $invoice['amount_paid'], 2, ',', ' ') . ' ' . (($company['currency_code'] ?? 'USD')), 0, 1, 'R');
+        $pdf->Cell(0, 8, $this->pdfText('Montant payé : ' . format_money($invoice['amount_paid'], $invoiceCurrency)), 0, 1, 'R');
         $pdf->Output('I', $invoice['invoice_number'] . '.pdf');
         exit;
     }
@@ -153,7 +156,7 @@ final class DocumentPdfService
         $pdf->Ln(3);
     }
 
-    private function renderItems(\FPDF $pdf, array $items): void
+    private function renderItems(\FPDF $pdf, array $items, string $currencyCode): void
     {
         $pdf->SetFont('Arial', 'B', 10);
         $pdf->SetFillColor(...self::BRAND_BLUE);
@@ -174,13 +177,13 @@ final class DocumentPdfService
             $pdf->Cell(80, 8, $this->pdfText(mb_strimwidth($description, 0, 40, '...')), 1, 0, 'L', true);
             $pdf->Cell(20, 8, $this->pdfText($type), 1, 0, 'C', true);
             $pdf->Cell(20, 8, number_format((float) $item['quantity'], 2, ',', ' '), 1, 0, 'R', true);
-            $pdf->Cell(35, 8, number_format((float) $item['unit_price'], 2, ',', ' '), 1, 0, 'R', true);
-            $pdf->Cell(35, 8, number_format((float) $item['line_total'], 2, ',', ' '), 1, 1, 'R', true);
+            $pdf->Cell(35, 8, $this->pdfText(format_money($item['unit_price'], $currencyCode)), 1, 0, 'R', true);
+            $pdf->Cell(35, 8, $this->pdfText(format_money($item['line_total'], $currencyCode)), 1, 1, 'R', true);
             $fill = !$fill;
         }
     }
 
-    private function renderTotals(\FPDF $pdf, float $subtotal, float $discount, string $taxLabel, float $tax, float $grandTotal): void
+    private function renderTotals(\FPDF $pdf, float $subtotal, float $discount, string $taxLabel, float $tax, float $grandTotal, string $currencyCode): void
     {
         $pdf->Ln(4);
         $startX = 132;
@@ -191,18 +194,18 @@ final class DocumentPdfService
         $pdf->SetXY($startX + 4, $startY + 4);
         $pdf->SetFont('Arial', '', 10);
         $pdf->Cell(30, 6, $this->pdfText('Sous-total'), 0, 0, 'L');
-        $pdf->Cell(28, 6, number_format($subtotal, 2, ',', ' '), 0, 1, 'R');
+        $pdf->Cell(28, 6, $this->pdfText(format_money($subtotal, $currencyCode)), 0, 1, 'R');
         $pdf->SetX($startX + 4);
         $pdf->Cell(30, 6, $this->pdfText('Remise'), 0, 0, 'L');
-        $pdf->Cell(28, 6, number_format($discount, 2, ',', ' '), 0, 1, 'R');
+        $pdf->Cell(28, 6, $this->pdfText(format_money($discount, $currencyCode)), 0, 1, 'R');
         $pdf->SetX($startX + 4);
         $pdf->Cell(30, 6, $this->pdfText($taxLabel), 0, 0, 'L');
-        $pdf->Cell(28, 6, number_format($tax, 2, ',', ' '), 0, 1, 'R');
+        $pdf->Cell(28, 6, $this->pdfText(format_money($tax, $currencyCode)), 0, 1, 'R');
         $pdf->SetX($startX + 4);
         $pdf->SetFont('Arial', 'B', 11);
         $pdf->SetTextColor(...self::BRAND_BLUE);
         $pdf->Cell(30, 8, $this->pdfText('Total TTC'), 0, 0, 'L');
-        $pdf->Cell(28, 8, number_format($grandTotal, 2, ',', ' '), 0, 1, 'R');
+        $pdf->Cell(28, 8, $this->pdfText(format_money($grandTotal, $currencyCode)), 0, 1, 'R');
         $pdf->SetTextColor(...self::BRAND_DARK);
         $pdf->Ln(6);
         $pdf->SetFont('Arial', 'I', 9);

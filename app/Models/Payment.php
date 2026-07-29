@@ -11,7 +11,7 @@ final class Payment extends Model
 {
     public function all(): array
     {
-        $sql = 'SELECT p.*, i.invoice_number, c.company_name AS client_name, u.full_name AS user_name
+        $sql = 'SELECT p.*, i.invoice_number, i.currency_code, c.company_name AS client_name, u.full_name AS user_name
                 FROM payments p
                 INNER JOIN invoices i ON i.id = p.invoice_id
                 INNER JOIN clients c ON c.id = i.client_id

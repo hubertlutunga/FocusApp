@@ -22,6 +22,8 @@ DROP TABLE IF EXISTS procurement_items;
 DROP TABLE IF EXISTS procurement_payments;
 DROP TABLE IF EXISTS procurements;
 DROP TABLE IF EXISTS stock_movements;
+DROP TABLE IF EXISTS stock_transfers;
+DROP TABLE IF EXISTS product_stocks;
 DROP TABLE IF EXISTS services;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS units;
@@ -30,6 +32,7 @@ DROP TABLE IF EXISTS suppliers;
 DROP TABLE IF EXISTS clients;
 DROP TABLE IF EXISTS company_settings;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS shops;
 DROP TABLE IF EXISTS roles;
 DROP TABLE IF EXISTS number_sequences;
 
@@ -47,9 +50,24 @@ CREATE TABLE roles (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE shops (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(30) NOT NULL UNIQUE,
+    name VARCHAR(150) NOT NULL,
+    manager_name VARCHAR(150) NULL,
+    phone VARCHAR(50) NULL,
+    address TEXT NULL,
+    city VARCHAR(100) NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    deleted_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 CREATE TABLE users (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     role_id BIGINT UNSIGNED NOT NULL,
+    shop_id BIGINT UNSIGNED NULL,
     full_name VARCHAR(150) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     phone VARCHAR(30) NULL,
@@ -60,7 +78,8 @@ CREATE TABLE users (
     deleted_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles(id)
+    CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles(id),
+    CONSTRAINT fk_users_shop FOREIGN KEY (shop_id) REFERENCES shops(id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE company_settings (
@@ -167,6 +186,19 @@ CREATE TABLE products (
     CONSTRAINT fk_products_unit FOREIGN KEY (unit_id) REFERENCES units(id)
 ) ENGINE=InnoDB;
 
+CREATE TABLE product_stocks (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT UNSIGNED NOT NULL,
+    shop_id BIGINT UNSIGNED NOT NULL,
+    minimum_stock DECIMAL(18,2) NULL,
+    current_stock DECIMAL(18,2) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_product_stocks_product_shop (product_id, shop_id),
+    CONSTRAINT fk_product_stocks_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_product_stocks_shop FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE services (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     category_id BIGINT UNSIGNED NOT NULL,
@@ -245,10 +277,12 @@ CREATE TABLE procurement_items (
 CREATE TABLE stock_movements (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     product_id BIGINT UNSIGNED NOT NULL,
-    movement_type ENUM('entry', 'exit', 'adjustment', 'invoice_validation', 'invoice_cancellation', 'procurement_receipt', 'manual') NOT NULL,
+    movement_type ENUM('entry', 'exit', 'adjustment', 'invoice_validation', 'invoice_cancellation', 'procurement_receipt', 'transfer_out', 'transfer_in', 'manual') NOT NULL,
     quantity DECIMAL(18,2) NOT NULL,
     quantity_before DECIMAL(18,2) NOT NULL DEFAULT 0,
     quantity_after DECIMAL(18,2) NOT NULL DEFAULT 0,
+    source_shop_id BIGINT UNSIGNED NULL,
+    destination_shop_id BIGINT UNSIGNED NULL,
     reference_type VARCHAR(50) NULL,
     reference_id BIGINT UNSIGNED NULL,
     note TEXT NULL,
@@ -256,7 +290,24 @@ CREATE TABLE stock_movements (
     created_by BIGINT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_stock_movements_product FOREIGN KEY (product_id) REFERENCES products(id),
+    CONSTRAINT fk_stock_movements_source_shop FOREIGN KEY (source_shop_id) REFERENCES shops(id),
+    CONSTRAINT fk_stock_movements_destination_shop FOREIGN KEY (destination_shop_id) REFERENCES shops(id),
     CONSTRAINT fk_stock_movements_user FOREIGN KEY (created_by) REFERENCES users(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE stock_transfers (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT UNSIGNED NOT NULL,
+    destination_shop_id BIGINT UNSIGNED NOT NULL,
+    quantity DECIMAL(18,2) NOT NULL,
+    note TEXT NULL,
+    created_by BIGINT UNSIGNED NULL,
+    deleted_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_stock_transfers_product FOREIGN KEY (product_id) REFERENCES products(id),
+    CONSTRAINT fk_stock_transfers_destination_shop FOREIGN KEY (destination_shop_id) REFERENCES shops(id),
+    CONSTRAINT fk_stock_transfers_user FOREIGN KEY (created_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 -- =========================================================
@@ -305,11 +356,13 @@ CREATE TABLE quote_items (
 CREATE TABLE invoices (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     quote_id BIGINT UNSIGNED NULL,
+    shop_id BIGINT UNSIGNED NULL,
     client_id BIGINT UNSIGNED NOT NULL,
     invoice_number VARCHAR(30) NOT NULL UNIQUE,
     invoice_date DATE NOT NULL,
     due_date DATE NULL,
     status ENUM('draft', 'validated', 'partial_paid', 'paid', 'cancelled') NOT NULL DEFAULT 'draft',
+    currency_code VARCHAR(10) NOT NULL DEFAULT 'USD',
     subtotal DECIMAL(18,2) NOT NULL DEFAULT 0,
     discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
     tax_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00,
@@ -326,6 +379,7 @@ CREATE TABLE invoices (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_invoices_quote FOREIGN KEY (quote_id) REFERENCES quotes(id),
+    CONSTRAINT fk_invoices_shop FOREIGN KEY (shop_id) REFERENCES shops(id),
     CONSTRAINT fk_invoices_client FOREIGN KEY (client_id) REFERENCES clients(id),
     CONSTRAINT fk_invoices_created_by FOREIGN KEY (created_by) REFERENCES users(id),
     CONSTRAINT fk_invoices_validated_by FOREIGN KEY (validated_by) REFERENCES users(id)
@@ -445,13 +499,16 @@ CREATE TABLE activity_logs (
 
 INSERT INTO roles (code, name, description) VALUES
 ('administrateur', 'Administrateur', 'Accès complet au système'),
-('caisse', 'Profil caisse', 'Ventes, devis, dépenses, paiements et rapports'),
+('caissier', 'Caissier', 'Ventes, devis, factures, paiements et rapports'),
 ('gestionnaire_stock', 'Gestionnaire de stock', 'Gestion des produits, approvisionnements et mouvements');
 
-INSERT INTO users (role_id, full_name, email, phone, password, is_active, last_login_at) VALUES
-(1, 'Administrateur Focus Group', 'admin@focusgroup.local', '+243 900 000 001', '$2y$12$85oD4.QCIXOqyr8sm5aP4ejZYUJCfonzhhTrm/Nqq6mCjQ3skEpZW', 1, NOW()),
-(2, 'Caissier Démonstration', 'caisse@focusgroup.local', '+243 900 000 002', '$2y$12$85oD4.QCIXOqyr8sm5aP4ejZYUJCfonzhhTrm/Nqq6mCjQ3skEpZW', 1, NULL),
-(3, 'Gestionnaire Stock Démonstration', 'stock@focusgroup.local', '+243 900 000 003', '$2y$12$85oD4.QCIXOqyr8sm5aP4ejZYUJCfonzhhTrm/Nqq6mCjQ3skEpZW', 1, NULL);
+INSERT INTO shops (code, name, manager_name, phone, address, city, is_active) VALUES
+('BTQ-GOMBE', 'Extension Gombe', 'Responsable Gombe', '+243 900 200 200', 'Kinshasa / Gombe', 'Kinshasa', 1);
+
+INSERT INTO users (role_id, shop_id, full_name, email, phone, password, is_active, last_login_at) VALUES
+(1, NULL, 'Administrateur Focus Group', 'admin@focusgroup.local', '+243 900 000 001', '$2y$12$85oD4.QCIXOqyr8sm5aP4ejZYUJCfonzhhTrm/Nqq6mCjQ3skEpZW', 1, NOW()),
+(2, 1, 'Caissier Démonstration', 'caisse@focusgroup.local', '+243 900 000 002', '$2y$12$85oD4.QCIXOqyr8sm5aP4ejZYUJCfonzhhTrm/Nqq6mCjQ3skEpZW', 1, NULL),
+(3, NULL, 'Gestionnaire Stock Démonstration', 'stock@focusgroup.local', '+243 900 000 003', '$2y$12$85oD4.QCIXOqyr8sm5aP4ejZYUJCfonzhhTrm/Nqq6mCjQ3skEpZW', 1, NULL);
 
 INSERT INTO company_settings (
     company_name, legal_name, email, phone, whatsapp, address, city, country, website, tax_id, idnat, commerce_register, currency_code,
@@ -547,8 +604,8 @@ INSERT INTO quote_items (quote_id, item_type, product_id, service_id, descriptio
 (1, 'product', 1, NULL, 'Toner HP 85A', 2, 95.00, 0.00, 0.00, 190.00),
 (1, 'service', NULL, 1, 'Installation caméras de surveillance', 1, 500.00, 0.00, 0.00, 500.00);
 
-INSERT INTO invoices (quote_id, client_id, invoice_number, invoice_date, due_date, status, subtotal, discount_amount, tax_rate, tax_amount, grand_total, amount_paid, balance_due, notes, validated_at, created_by, validated_by) VALUES
-(1, 1, 'FAC-2026-00001', '2026-03-12', '2026-03-19', 'partial_paid', 690.00, 0.00, 0.00, 0.00, 690.00, 300.00, 390.00, 'Facture issue du devis DEV-2026-00001', '2026-03-12 09:30:00', 1, 1);
+INSERT INTO invoices (quote_id, shop_id, client_id, invoice_number, invoice_date, due_date, status, currency_code, subtotal, discount_amount, tax_rate, tax_amount, grand_total, amount_paid, balance_due, notes, validated_at, created_by, validated_by) VALUES
+(1, NULL, 1, 'FAC-2026-00001', '2026-03-12', '2026-03-19', 'partial_paid', 'USD', 690.00, 0.00, 0.00, 0.00, 690.00, 300.00, 390.00, 'Facture issue du devis DEV-2026-00001', '2026-03-12 09:30:00', 1, 1);
 
 INSERT INTO invoice_items (invoice_id, item_type, product_id, service_id, description, quantity, unit_price, discount_amount, tax_amount, line_total) VALUES
 (1, 'product', 1, NULL, 'Toner HP 85A', 2, 95.00, 0.00, 0.00, 190.00),

@@ -15,6 +15,7 @@ use App\Controllers\ProductController;
 use App\Controllers\QuoteController;
 use App\Controllers\ReportController;
 use App\Controllers\ServiceController;
+use App\Controllers\ShopController;
 use App\Controllers\StockController;
 use App\Controllers\SupplierController;
 use App\Controllers\UnitController;
@@ -35,6 +36,12 @@ $router->get('/dashboard', [DashboardController::class, 'index'], [AuthMiddlewar
 
 $router->get('/settings/company', [CompanySettingController::class, 'edit'], [AdminMiddleware::class]);
 $router->post('/settings/company/update', [CompanySettingController::class, 'update'], [AdminMiddleware::class]);
+$router->get('/shops', [ShopController::class, 'index'], [AdminMiddleware::class]);
+$router->get('/shops/create', [ShopController::class, 'create'], [AdminMiddleware::class]);
+$router->post('/shops/store', [ShopController::class, 'store'], [AdminMiddleware::class]);
+$router->get('/shops/edit', [ShopController::class, 'edit'], [AdminMiddleware::class]);
+$router->post('/shops/update', [ShopController::class, 'update'], [AdminMiddleware::class]);
+$router->post('/shops/delete', [ShopController::class, 'delete'], [AdminMiddleware::class]);
 $router->get('/users', [UserController::class, 'index'], [AdminMiddleware::class]);
 $router->get('/users/create', [UserController::class, 'create'], [AdminMiddleware::class]);
 $router->post('/users/store', [UserController::class, 'store'], [AdminMiddleware::class]);
@@ -86,6 +93,7 @@ $router->post('/services/delete', [ServiceController::class, 'delete'], [AdminMi
 
 $router->get('/stock', [StockController::class, 'index'], [StockManagerMiddleware::class]);
 $router->post('/stock/adjust', [StockController::class, 'adjust'], [StockManagerMiddleware::class]);
+$router->post('/stock/transfer', [StockController::class, 'transfer'], [StockManagerMiddleware::class]);
 
 $router->get('/procurements', [ProcurementController::class, 'index'], [StockManagerMiddleware::class]);
 $router->get('/procurements/create', [ProcurementController::class, 'create'], [StockManagerMiddleware::class]);

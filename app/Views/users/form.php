@@ -29,6 +29,17 @@
                 </select>
             </div>
             <div class="col-md-6">
+                <label class="form-label" for="shop_id">Boutique / extension</label>
+                <?php $selectedShopId = old_value('shop_id', $userData['shop_id'] ?? ''); ?>
+                <select class="form-select" id="shop_id" name="shop_id">
+                    <option value="">Stock général / siège</option>
+                    <?php foreach ($shops as $shop): ?>
+                        <option value="<?= e((string) $shop['id']); ?>" <?= (string) $selectedShopId === (string) $shop['id'] ? 'selected' : ''; ?>><?= e($shop['name'] . ' (' . $shop['code'] . ')'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="form-text">Laissez vide pour un administrateur ou un gestionnaire de stock général.</div>
+            </div>
+            <div class="col-md-6">
                 <label class="form-label" for="email">Email</label>
                 <input type="email" class="form-control" id="email" name="email" value="<?= e(old('email', (string) ($userData['email'] ?? ''))); ?>" required>
             </div>

@@ -321,6 +321,38 @@ if (!function_exists('tax_rate_options')) {
     }
 }
 
+if (!function_exists('currency_options')) {
+    function currency_options(): array
+    {
+        return [
+            'USD' => 'USD ($)',
+            'CDF' => 'CDF',
+        ];
+    }
+}
+
+if (!function_exists('normalize_currency_code')) {
+    function normalize_currency_code(mixed $value): string
+    {
+        $currency = strtoupper(trim((string) $value));
+        return array_key_exists($currency, currency_options()) ? $currency : 'USD';
+    }
+}
+
+if (!function_exists('currency_symbol')) {
+    function currency_symbol(mixed $currencyCode): string
+    {
+        return normalize_currency_code($currencyCode) === 'USD' ? '$' : 'CDF';
+    }
+}
+
+if (!function_exists('format_money')) {
+    function format_money(mixed $amount, mixed $currencyCode = 'USD'): string
+    {
+        return number_format((float) $amount, 2, ',', ' ') . ' ' . currency_symbol($currencyCode);
+    }
+}
+
 if (!function_exists('normalize_tax_rate')) {
     function normalize_tax_rate(mixed $value): float
     {
@@ -364,6 +396,7 @@ if (!function_exists('module_badge_class')) {
             'depenses' => 'badge-module badge-module-expenses',
             'approvisionnements' => 'badge-module badge-module-procurements',
             'stock' => 'badge-module badge-module-stock',
+            'boutiques' => 'badge-module badge-module-stock',
             'categories' => 'badge-module badge-module-categories',
             'unites' => 'badge-module badge-module-units',
             'authentification' => 'badge-module badge-module-auth',
@@ -383,6 +416,8 @@ if (!function_exists('movement_label')) {
             'invoice_validation' => 'Sortie par facture',
             'invoice_cancellation' => 'Retour après annulation',
             'procurement_receipt' => 'Réception approvisionnement',
+            'transfer_out' => 'Transfert sorti',
+            'transfer_in' => 'Transfert reçu',
             'manual' => 'Mouvement manuel',
             default => ucfirst(str_replace('_', ' ', trim((string) $movementType))),
         };
@@ -439,6 +474,19 @@ if (!function_exists('user_can_access_stock_management')) {
     function user_can_access_stock_management(): bool
     {
         return user_has_role(['administrateur', 'gestionnaire_stock']);
+    }
+}
+
+if (!function_exists('current_user_shop_id')) {
+    function current_user_shop_id(): ?int
+    {
+        $shopId = Auth::user()['shop_id'] ?? null;
+
+        if ($shopId === null || $shopId === '') {
+            return null;
+        }
+
+        return (int) $shopId;
     }
 }
 

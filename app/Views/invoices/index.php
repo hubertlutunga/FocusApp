@@ -24,15 +24,16 @@
                                 <div class="table-cell-stack">
                                     <div class="table-cell-main"><?= e($invoice['invoice_number']); ?></div>
                                     <div class="table-cell-meta"><?= e($invoice['client_name']); ?></div>
+                                    <?php if (!empty($invoice['shop_name'])): ?><div class="table-cell-meta">Boutique : <?= e($invoice['shop_name']); ?></div><?php endif; ?>
                                     <div class="table-cell-meta"><?= e(date('d/m/Y', strtotime((string) $invoice['invoice_date']))); ?></div>
                                 </div>
                             </td>
                             <td><span class="badge <?= e(status_badge_class($invoice['status'])); ?>"><?= e(status_label($invoice['status'])); ?></span></td>
                             <td>
                                 <div class="table-cell-stack">
-                                    <div class="table-cell-main"><?= e(number_format((float) $invoice['grand_total'], 2, ',', ' ')); ?></div>
-                                    <div class="table-cell-meta">Payé : <?= e(number_format((float) $invoice['amount_paid'], 2, ',', ' ')); ?></div>
-                                    <div class="table-cell-meta">Solde : <?= e(number_format((float) $invoice['balance_due'], 2, ',', ' ')); ?></div>
+                                    <div class="table-cell-main"><?= e(format_money($invoice['grand_total'], $invoice['currency_code'] ?? 'USD')); ?></div>
+                                    <div class="table-cell-meta">Payé : <?= e(format_money($invoice['amount_paid'], $invoice['currency_code'] ?? 'USD')); ?></div>
+                                    <div class="table-cell-meta">Solde : <?= e(format_money($invoice['balance_due'], $invoice['currency_code'] ?? 'USD')); ?></div>
                                 </div>
                             </td>
                             <td class="text-end">

@@ -24,10 +24,11 @@
                                 <div class="table-cell-stack">
                                     <div class="table-cell-main"><?= e($user['full_name']); ?></div>
                                     <div class="table-cell-meta"><?= e($user['email']); ?></div>
+                                    <div class="table-cell-meta">Boutique : <?= e($user['shop_name'] ?: 'Stock général / siège'); ?></div>
                                     <div class="table-cell-meta"><?= e($user['phone'] ?: 'Sans téléphone'); ?><?= $user['last_login_at'] ? ' • Dernière connexion : ' . e(date('d/m/Y H:i', strtotime((string) $user['last_login_at']))) : ''; ?></div>
                                 </div>
                             </td>
-                            <td><span class="badge <?= e(module_badge_class($user['role_code'] === 'caisse' ? 'paiements' : ($user['role_code'] === 'gestionnaire_stock' ? 'stock' : 'authentification'))); ?>"><?= e($user['role_name']); ?></span></td>
+                            <td><span class="badge <?= e(module_badge_class(in_array($user['role_code'], ['caisse', 'caissier'], true) ? 'paiements' : ($user['role_code'] === 'gestionnaire_stock' ? 'stock' : 'authentification'))); ?>"><?= e($user['role_name']); ?></span></td>
                             <td><span class="badge <?= e(status_badge_class((int) $user['is_active'] === 1 ? 'active' : 'inactive')); ?>"><?= (int) $user['is_active'] === 1 ? 'Actif' : 'Inactif'; ?></span></td>
                             <td class="text-end">
                                 <div class="table-actions">

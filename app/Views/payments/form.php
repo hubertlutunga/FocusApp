@@ -30,7 +30,7 @@ foreach ($openInvoices as $invoiceOption) {
                 <select class="form-select" id="invoice_id" name="invoice_id" required>
                     <option value="">Sélectionner</option>
                     <?php foreach ($openInvoices as $invoice): ?>
-                        <option value="<?= e((string) $invoice['id']); ?>" data-balance="<?= e((string) $invoice['balance_due']); ?>" <?= $selectedInvoice === (int) $invoice['id'] ? 'selected' : ''; ?>><?= e($invoice['invoice_number'] . ' — ' . $invoice['client_name'] . ' — Solde : ' . number_format((float) $invoice['balance_due'], 2, ',', ' ')); ?></option>
+                        <option value="<?= e((string) $invoice['id']); ?>" data-balance="<?= e((string) $invoice['balance_due']); ?>" <?= $selectedInvoice === (int) $invoice['id'] ? 'selected' : ''; ?>><?= e($invoice['invoice_number'] . ' — ' . $invoice['client_name'] . ' — Solde : ' . format_money($invoice['balance_due'], $invoice['currency_code'] ?? 'USD')); ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

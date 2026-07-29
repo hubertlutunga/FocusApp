@@ -32,7 +32,7 @@ final class InvoiceController extends Controller
         $this->render('invoices.form', [
             'pageTitle' => 'Nouvelle facture',
             'clients' => (new Client())->options(),
-            'products' => (new Product())->options(),
+            'products' => (new Product())->options(current_user_shop_id()),
             'services' => (new Service())->options(),
             'formAction' => url('/invoices/store'),
         ]);
@@ -44,11 +44,13 @@ final class InvoiceController extends Controller
 
         $header = [
             'quote_id' => null,
+            'shop_id' => current_user_shop_id(),
             'client_id' => (int) ($_POST['client_id'] ?? 0),
             'invoice_number' => '',
             'invoice_date' => (string) ($_POST['invoice_date'] ?? date('Y-m-d')),
             'due_date' => ($_POST['due_date'] ?? '') !== '' ? (string) $_POST['due_date'] : null,
             'status' => 'draft',
+            'currency_code' => normalize_currency_code($_POST['currency_code'] ?? 'USD'),
             'subtotal' => 0,
             'discount_amount' => 0,
             'tax_rate' => normalize_tax_rate($_POST['tax_rate'] ?? 0),
@@ -68,6 +70,7 @@ final class InvoiceController extends Controller
             'client_id' => $header['client_id'],
             'invoice_date' => $header['invoice_date'],
             'due_date' => $header['due_date'],
+            'currency_code' => $header['currency_code'],
             'tax_rate' => $header['tax_rate'],
             'notes' => $header['notes'],
             'items' => $items,

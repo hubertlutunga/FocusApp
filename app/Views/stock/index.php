@@ -2,16 +2,21 @@
 $productCount = count($products);
 $totalStock = array_reduce($products, static fn (float $carry, array $product): float => $carry + (float) $product['current_stock'], 0.0);
 $lowStockCount = count(array_filter($products, static fn (array $product): bool => (float) $product['current_stock'] <= (float) $product['minimum_stock']));
+$isShopStock = $currentShopId !== null;
 ?>
 
 <div class="page-hero">
     <div>
-        <h1 class="h3 mb-1">Stock disponible</h1>
-        <p class="text-muted mb-0">Consultez rapidement les produits en stock et lancez un approvisionnement si nécessaire.</p>
+        <h1 class="h3 mb-1"><?= $isShopStock ? 'Stock boutique' : 'Stock général'; ?></h1>
+        <p class="text-muted mb-0"><?= $isShopStock ? 'Stock disponible dans ' . e($currentShopName ?: 'votre boutique') . '.' : 'Consultez le stock central et transférez des produits vers les boutiques.'; ?></p>
     </div>
-    <a href="<?= e(url('/procurements')); ?>" class="btn btn-primary">
-        <i class="bi bi-cart-plus me-1"></i> Approvisionnement
-    </a>
+    <div class="d-flex gap-2 flex-wrap">
+        <?php if (!$isShopStock): ?>
+            <a href="<?= e(url('/procurements')); ?>" class="btn btn-primary">
+                <i class="bi bi-cart-plus me-1"></i> Approvisionnement
+            </a>
+        <?php endif; ?>
+    </div>
 </div>
 
 <div class="row g-3 mb-4">
@@ -50,11 +55,54 @@ $lowStockCount = count(array_filter($products, static fn (array $product): bool 
     </div>
 </div>
 
+<?php if (!$isShopStock): ?>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 pt-4 px-4">
+        <h3 class="h5 mb-1">Transférer vers une boutique</h3>
+        <p class="text-muted mb-0">Déduisez une quantité du stock général et ajoutez-la au stock d’une extension.</p>
+    </div>
+    <div class="card-body px-4 pb-4">
+        <form method="post" action="<?= e(url('/stock/transfer')); ?>" class="row g-3 align-items-end">
+            <?= csrf_field(); ?>
+            <div class="col-md-4">
+                <label class="form-label" for="transfer_product_id">Produit</label>
+                <select class="form-select" id="transfer_product_id" name="product_id" required>
+                    <option value="">Sélectionner</option>
+                    <?php foreach ($products as $product): ?>
+                        <option value="<?= e((string) $product['id']); ?>"><?= e($product['name'] . ' (' . $product['sku'] . ') — Stock : ' . number_format((float) $product['current_stock'], 2, ',', ' ')); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="destination_shop_id">Boutique</label>
+                <select class="form-select" id="destination_shop_id" name="destination_shop_id" required>
+                    <option value="">Destination</option>
+                    <?php foreach ($shops as $shop): ?>
+                        <option value="<?= e((string) $shop['id']); ?>"><?= e($shop['name'] . ' (' . $shop['code'] . ')'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="transfer_quantity">Quantité</label>
+                <input type="number" step="0.01" min="0.01" class="form-control" id="transfer_quantity" name="quantity" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="transfer_note">Note</label>
+                <input class="form-control" id="transfer_note" name="note" placeholder="Motif du transfert">
+            </div>
+            <div class="col-12 d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">Transférer le stock</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
         <div>
             <h3 class="h5 mb-1">Produits et stock disponible</h3>
-            <p class="text-muted mb-0">Vue synthétique du stock actuel par produit.</p>
+            <p class="text-muted mb-0"><?= $isShopStock ? 'Vue synthétique du stock de cette boutique.' : 'Vue synthétique du stock général actuel par produit.'; ?></p>
         </div>
         <span class="muted-label"><?= e((string) $productCount); ?> produit(s)</span>
     </div>
@@ -67,6 +115,7 @@ $lowStockCount = count(array_filter($products, static fn (array $product): bool 
                         <th data-mobile-hidden="true">Catégorie</th>
                         <th data-mobile-hidden="true">Unité</th>
                         <th>Stock disponible</th>
+                        <?php if ($isShopStock): ?><th data-mobile-hidden="true">Stock général</th><?php endif; ?>
                         <th data-mobile-hidden="true">Seuil min.</th>
                         <th data-mobile-hidden="true">Statut</th>
                     </tr>
@@ -86,6 +135,7 @@ $lowStockCount = count(array_filter($products, static fn (array $product): bool 
                             <td class="fw-semibold <?= $isLowStock ? 'text-danger' : 'text-success'; ?>">
                                 <?= e(number_format((float) $product['current_stock'], 2, ',', ' ')); ?>
                             </td>
+                            <?php if ($isShopStock): ?><td><?= e(number_format((float) ($product['central_stock'] ?? 0), 2, ',', ' ')); ?></td><?php endif; ?>
                             <td><?= e(number_format((float) $product['minimum_stock'], 2, ',', ' ')); ?></td>
                             <td>
                                 <span class="badge rounded-pill <?= $isLowStock ? 'text-bg-danger' : 'text-bg-success'; ?>">
@@ -97,5 +147,39 @@ $lowStockCount = count(array_filter($products, static fn (array $product): bool 
                 </tbody>
             </table>
         </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-0 pt-4 px-4">
+        <h3 class="h5 mb-1">Derniers transferts</h3>
+        <p class="text-muted mb-0"><?= $isShopStock ? 'Transferts reçus par cette boutique.' : 'Transferts récents du stock général vers les extensions.'; ?></p>
+    </div>
+    <div class="card-body px-4 pb-4">
+        <?php if ($recentTransfers === []): ?>
+            <div class="alert alert-light mb-0">Aucun transfert enregistré.</div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle js-datatable">
+                    <thead><tr><th>Produit</th><th>Boutique</th><th>Quantité</th><th data-mobile-hidden="true">Date</th><th data-mobile-hidden="true">Agent</th></tr></thead>
+                    <tbody>
+                        <?php foreach ($recentTransfers as $transfer): ?>
+                            <tr>
+                                <td>
+                                    <div class="table-cell-stack">
+                                        <div class="table-cell-main"><?= e($transfer['product_name']); ?></div>
+                                        <div class="table-cell-meta"><?= e($transfer['sku']); ?><?= $transfer['note'] ? ' • ' . e($transfer['note']) : ''; ?></div>
+                                    </div>
+                                </td>
+                                <td><?= e($transfer['destination_shop_name']); ?></td>
+                                <td class="fw-semibold text-success"><?= e(number_format((float) $transfer['quantity'], 2, ',', ' ')); ?></td>
+                                <td><?= e(date('d/m/Y H:i', strtotime((string) $transfer['created_at']))); ?></td>
+                                <td><?= e($transfer['user_name'] ?: '—'); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
     </div>
 </div>

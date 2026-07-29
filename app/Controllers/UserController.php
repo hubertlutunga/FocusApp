@@ -8,6 +8,7 @@ use App\Core\Auth;
 use App\Core\Controller;
 use App\Core\Session;
 use App\Models\ActivityLog;
+use App\Models\Shop;
 use App\Models\User;
 use Throwable;
 
@@ -27,6 +28,7 @@ final class UserController extends Controller
             'pageTitle' => 'Nouvel utilisateur',
             'userData' => null,
             'roles' => (new User())->roleOptions(),
+            'shops' => (new Shop())->options(),
             'formAction' => url('/users/store'),
             'submitLabel' => 'Créer le compte',
             'passwordRequired' => true,
@@ -53,6 +55,7 @@ final class UserController extends Controller
         try {
             $userModel->createUser([
                 'role_id' => $payload['role_id'],
+                'shop_id' => $payload['shop_id'],
                 'full_name' => $payload['full_name'],
                 'email' => $payload['email'],
                 'phone' => $payload['phone'],
@@ -84,6 +87,7 @@ final class UserController extends Controller
             'pageTitle' => 'Modifier un utilisateur',
             'userData' => $user,
             'roles' => (new User())->roleOptions(),
+            'shops' => (new Shop())->options(false),
             'formAction' => url('/users/update'),
             'submitLabel' => 'Mettre à jour le compte',
             'passwordRequired' => false,
@@ -111,6 +115,7 @@ final class UserController extends Controller
         try {
             $updateData = [
                 'role_id' => $payload['role_id'],
+                'shop_id' => $payload['shop_id'],
                 'full_name' => $payload['full_name'],
                 'email' => $payload['email'],
                 'phone' => $payload['phone'],
@@ -160,6 +165,7 @@ final class UserController extends Controller
     {
         return [
             'role_id' => (int) ($_POST['role_id'] ?? 0),
+            'shop_id' => ($_POST['shop_id'] ?? '') !== '' ? (int) $_POST['shop_id'] : null,
             'full_name' => trim((string) ($_POST['full_name'] ?? '')),
             'email' => trim((string) ($_POST['email'] ?? '')),
             'phone' => trim((string) ($_POST['phone'] ?? '')),

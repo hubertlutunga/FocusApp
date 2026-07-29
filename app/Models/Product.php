@@ -11,7 +11,33 @@ final class Product extends Model
 {
     public function all(): array
     {
-        $sql = 'SELECT p.*, c.name AS category_name, u.name AS unit_name, u.symbol AS unit_symbol
+        return $this->allForStock(null);
+    }
+
+    public function allForStock(?int $shopId = null): array
+    {
+        if ($shopId !== null) {
+            $sql = 'SELECT p.*, COALESCE(ps.current_stock, 0) AS current_stock, p.current_stock AS central_stock,
+                           COALESCE(ps.minimum_stock, p.minimum_stock) AS minimum_stock,
+                           c.name AS category_name, u.name AS unit_name, u.symbol AS unit_symbol, s.name AS stock_shop_name
+                    FROM products p
+                    INNER JOIN categories c ON c.id = p.category_id
+                    INNER JOIN units u ON u.id = p.unit_id
+                    INNER JOIN shops s ON s.id = :shop_id
+                    LEFT JOIN product_stocks ps ON ps.product_id = p.id AND ps.shop_id = :shop_id_stock
+                    WHERE p.deleted_at IS NULL
+                    ORDER BY p.id DESC';
+
+            $statement = $this->db->prepare($sql);
+            $statement->execute([
+                'shop_id' => $shopId,
+                'shop_id_stock' => $shopId,
+            ]);
+
+            return $statement->fetchAll();
+        }
+
+        $sql = 'SELECT p.*, p.current_stock AS central_stock, c.name AS category_name, u.name AS unit_name, u.symbol AS unit_symbol, NULL AS stock_shop_name
                 FROM products p
                 INNER JOIN categories c ON c.id = p.category_id
                 INNER JOIN units u ON u.id = p.unit_id
@@ -29,10 +55,38 @@ final class Product extends Model
         return $product ?: null;
     }
 
-    public function options(): array
+    public function options(?int $shopId = null): array
     {
+        if ($shopId !== null) {
+            $statement = $this->db->prepare('SELECT p.id, p.sku, p.name, COALESCE(ps.current_stock, 0) AS current_stock, p.cost_price, p.sale_price, u.symbol AS unit_symbol
+                FROM products p
+                INNER JOIN units u ON u.id = p.unit_id
+                LEFT JOIN product_stocks ps ON ps.product_id = p.id AND ps.shop_id = :shop_id
+                WHERE p.deleted_at IS NULL AND p.is_active = 1
+                ORDER BY p.name ASC');
+            $statement->execute(['shop_id' => $shopId]);
+
+            return $statement->fetchAll();
+        }
+
         $statement = $this->db->query('SELECT p.id, p.sku, p.name, p.current_stock, p.cost_price, p.sale_price, u.symbol AS unit_symbol FROM products p INNER JOIN units u ON u.id = p.unit_id WHERE p.deleted_at IS NULL AND p.is_active = 1 ORDER BY p.name ASC');
         return $statement->fetchAll();
+    }
+
+    public function stockForLocation(int $id, ?int $shopId = null): float
+    {
+        if ($shopId === null) {
+            $product = $this->find($id);
+            return $product ? (float) $product['current_stock'] : 0.0;
+        }
+
+        $statement = $this->db->prepare('SELECT current_stock FROM product_stocks WHERE product_id = :product_id AND shop_id = :shop_id LIMIT 1');
+        $statement->execute([
+            'product_id' => $id,
+            'shop_id' => $shopId,
+        ]);
+
+        return (float) ($statement->fetchColumn() ?: 0);
     }
 
     public function lowStock(): array
@@ -294,6 +348,18 @@ final class Product extends Model
         $statement->execute([
             'current_stock' => $newStock,
             'id' => $id,
+        ]);
+    }
+
+    public function adjustShopStock(int $id, int $shopId, float $newStock): void
+    {
+        $statement = $this->db->prepare('INSERT INTO product_stocks (product_id, shop_id, current_stock, created_at, updated_at)
+            VALUES (:product_id, :shop_id, :current_stock, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE current_stock = VALUES(current_stock), updated_at = NOW()');
+        $statement->execute([
+            'product_id' => $id,
+            'shop_id' => $shopId,
+            'current_stock' => $newStock,
         ]);
     }
 }
