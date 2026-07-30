@@ -9,6 +9,7 @@ use App\Core\Controller;
 use App\Core\Session;
 use App\Models\ActivityLog;
 use App\Models\Client;
+use App\Models\CompanySetting;
 use App\Models\Invoice;
 use App\Models\NumberSequence;
 use App\Models\Product;
@@ -110,6 +111,7 @@ final class QuoteController extends Controller
             'pageTitle' => 'Détail devis',
             'quote' => $quote,
             'items' => $quoteModel->items($id),
+            'company' => (new CompanySetting())->first(),
         ]);
     }
 

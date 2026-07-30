@@ -127,6 +127,8 @@
                             <p class="mb-0"><?= e($invoice['notes']); ?></p>
                         </div>
                     <?php endif; ?>
+
+                    <?php require view_path('partials.company_bank_details'); ?>
                 </div>
             </div>
 

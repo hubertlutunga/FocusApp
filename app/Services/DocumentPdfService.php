@@ -24,6 +24,7 @@ final class DocumentPdfService
         $quoteCurrency = normalize_currency_code($company['currency_code'] ?? 'USD');
         $this->renderItems($pdf, $items, $quoteCurrency);
         $this->renderTotals($pdf, (float) $quote['subtotal'], (float) $quote['discount_amount'], tax_rate_label($quote['tax_rate'] ?? 0), (float) $quote['tax_amount'], (float) $quote['grand_total'], $quoteCurrency);
+        $this->renderBankDetails($pdf, $company);
         $pdf->Output('I', $quote['quote_number'] . '.pdf');
         exit;
     }
@@ -46,6 +47,7 @@ final class DocumentPdfService
         $pdf->Ln(4);
         $pdf->SetFont('Arial', 'B', 11);
         $pdf->Cell(0, 8, $this->pdfText('Montant payé : ' . format_money($invoice['amount_paid'], $invoiceCurrency)), 0, 1, 'R');
+        $this->renderBankDetails($pdf, $company);
         $pdf->Output('I', $invoice['invoice_number'] . '.pdf');
         exit;
     }
@@ -211,6 +213,37 @@ final class DocumentPdfService
         $pdf->SetFont('Arial', 'I', 9);
         $pdf->SetTextColor(100, 116, 139);
         $pdf->MultiCell(0, 5, $this->pdfText('Merci pour votre confiance. Document généré par Focus Group ERP.'));
+    }
+
+    private function renderBankDetails(\FPDF $pdf, ?array $company): void
+    {
+        $details = array_filter([
+            'Banque' => trim((string) ($company['bank_name'] ?? '')),
+            'Compte USD' => trim((string) ($company['bank_account_usd'] ?? '')),
+            'Compte CDF' => trim((string) ($company['bank_account_cdf'] ?? '')),
+            'SWIFT' => trim((string) ($company['swift_code'] ?? '')),
+        ], static fn (string $value): bool => $value !== '');
+
+        if ($details === []) {
+            return;
+        }
+
+        $pdf->Ln(3);
+        $pdf->SetFillColor(248, 250, 252);
+        $pdf->SetDrawColor(226, 232, 240);
+        $pdf->SetTextColor(...self::BRAND_BLUE);
+        $pdf->SetFont('Arial', 'B', 10);
+        $pdf->Cell(0, 8, $this->pdfText('Coordonnées bancaires'), 1, 1, 'L', true);
+        $pdf->SetFont('Arial', '', 9.5);
+
+        foreach ($details as $label => $value) {
+            $pdf->SetTextColor(...self::BRAND_BLUE);
+            $pdf->Cell(38, 7, $this->pdfText($label . ' :'), 1, 0, 'L', true);
+            $pdf->SetTextColor(...self::BRAND_DARK);
+            $pdf->Cell(0, 7, $this->pdfText($value), 1, 1, 'L');
+        }
+
+        $pdf->Ln(2);
     }
 
     private function pdfText(?string $text): string

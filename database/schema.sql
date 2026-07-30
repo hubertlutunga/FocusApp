@@ -96,6 +96,10 @@ CREATE TABLE company_settings (
     tax_id VARCHAR(100) NULL,
     idnat VARCHAR(100) NULL,
     commerce_register VARCHAR(100) NULL,
+    bank_name VARCHAR(150) NULL,
+    bank_account_usd VARCHAR(100) NULL,
+    bank_account_cdf VARCHAR(100) NULL,
+    swift_code VARCHAR(50) NULL,
     logo VARCHAR(255) NULL,
     currency_code VARCHAR(10) NOT NULL DEFAULT 'USD',
     quote_prefix VARCHAR(20) NOT NULL DEFAULT 'DEV',
@@ -511,7 +515,8 @@ INSERT INTO users (role_id, shop_id, full_name, email, phone, password, is_activ
 (3, NULL, 'Gestionnaire Stock Démonstration', 'stock@focusgroup.local', '+243 900 000 003', '$2y$12$85oD4.QCIXOqyr8sm5aP4ejZYUJCfonzhhTrm/Nqq6mCjQ3skEpZW', 1, NULL);
 
 INSERT INTO company_settings (
-    company_name, legal_name, email, phone, whatsapp, address, city, country, website, tax_id, idnat, commerce_register, currency_code,
+    company_name, legal_name, email, phone, whatsapp, address, city, country, website, tax_id, idnat, commerce_register,
+    bank_name, bank_account_usd, bank_account_cdf, swift_code, currency_code,
     quote_prefix, invoice_prefix, payment_prefix, procurement_prefix, expense_prefix
 ) VALUES (
     'Focus Group',
@@ -526,6 +531,10 @@ INSERT INTO company_settings (
     'A123456789',
     '01-83-N12345X',
     'CD/KIN/RCCM/2026-A-001',
+    'Banque partenaire',
+    '',
+    '',
+    '',
     'USD',
     'DEV',
     'FAC',

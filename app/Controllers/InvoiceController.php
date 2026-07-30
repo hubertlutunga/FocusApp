@@ -9,6 +9,7 @@ use App\Core\Controller;
 use App\Core\Session;
 use App\Models\ActivityLog;
 use App\Models\Client;
+use App\Models\CompanySetting;
 use App\Models\Invoice;
 use App\Models\NumberSequence;
 use App\Models\Payment;
@@ -120,6 +121,7 @@ final class InvoiceController extends Controller
             'invoice' => $invoice,
             'items' => $invoiceModel->items($id),
             'payments' => (new Payment())->byInvoice($id),
+            'company' => (new CompanySetting())->first(),
         ]);
     }
 

@@ -60,6 +60,29 @@
                 <textarea class="form-control" id="address" name="address" rows="3"><?= e(old('address', (string) ($settings['address'] ?? ''))); ?></textarea>
             </div>
 
+            <div class="col-12 pt-3">
+                <div class="border-top pt-4">
+                    <h4 class="h6 mb-1">Coordonnées bancaires</h4>
+                    <p class="text-muted mb-0">Ces informations seront affichées sur les devis et factures.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="bank_name">Nom de la banque</label>
+                <input class="form-control" id="bank_name" name="bank_name" value="<?= e(old('bank_name', (string) ($settings['bank_name'] ?? ''))); ?>" placeholder="Ex. Rawbank, EquityBCDC...">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="swift_code">Code SWIFT</label>
+                <input class="form-control" id="swift_code" name="swift_code" value="<?= e(old('swift_code', (string) ($settings['swift_code'] ?? ''))); ?>" placeholder="Ex. RAWBCDKI">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="bank_account_usd">Numéro de compte USD</label>
+                <input class="form-control" id="bank_account_usd" name="bank_account_usd" value="<?= e(old('bank_account_usd', (string) ($settings['bank_account_usd'] ?? ''))); ?>">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="bank_account_cdf">Numéro de compte CDF</label>
+                <input class="form-control" id="bank_account_cdf" name="bank_account_cdf" value="<?= e(old('bank_account_cdf', (string) ($settings['bank_account_cdf'] ?? ''))); ?>">
+            </div>
+
             <div class="col-md-2">
                 <label class="form-label" for="currency_code">Devise</label>
                 <input class="form-control" id="currency_code" name="currency_code" maxlength="10" value="<?= e(old('currency_code', (string) ($settings['currency_code'] ?? 'USD'))); ?>" required>
