@@ -32,7 +32,7 @@ final class ProductController extends Controller
         $shopId = current_user_shop_id();
 
         $this->render('products.catalog', [
-            'pageTitle' => 'Catalogue photos',
+            'pageTitle' => 'Catalogue',
             'products' => (new Product())->allForStock($shopId),
             'currentShopName' => (string) (Auth::user()['shop_name'] ?? ''),
             'isShopCatalog' => $shopId !== null,

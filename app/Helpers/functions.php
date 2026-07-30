@@ -441,6 +441,24 @@ if (!function_exists('movement_label')) {
     }
 }
 
+if (!function_exists('movement_tooltip')) {
+    function movement_tooltip(?string $movementType): string
+    {
+        return match (strtolower(trim((string) $movementType))) {
+            'entry' => 'Entrée manuelle : ajout direct de stock dans l’emplacement sélectionné.',
+            'exit' => 'Sortie manuelle : retrait direct de stock.',
+            'adjustment' => 'Ajustement : correction du stock après contrôle ou inventaire.',
+            'invoice_validation' => 'Sortie par facture : le stock a été diminué lors de la validation d’une vente.',
+            'invoice_cancellation' => 'Retour après annulation : le stock a été réintégré après annulation d’une facture.',
+            'procurement_receipt' => 'Réception approvisionnement : stock ajouté après réception d’un achat fournisseur.',
+            'transfer_out' => 'Transfert sorti : quantité retirée du stock général pour être envoyée à une boutique.',
+            'transfer_in' => 'Transfert reçu : quantité reçue dans une boutique depuis le stock général.',
+            'manual' => 'Mouvement manuel : opération de stock enregistrée manuellement.',
+            default => 'Mouvement de stock enregistré dans le système.',
+        };
+    }
+}
+
 if (!function_exists('module_label')) {
     function module_label(?string $module): string
     {

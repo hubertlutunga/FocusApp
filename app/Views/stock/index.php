@@ -172,7 +172,12 @@ $isShopStock = $currentShopId !== null;
                                     </div>
                                 </td>
                                 <td><?= e($transfer['destination_shop_name']); ?></td>
-                                <td class="fw-semibold text-success"><?= e(number_format((float) $transfer['quantity'], 2, ',', ' ')); ?></td>
+                                <td class="fw-semibold text-success">
+                                    <span data-bs-toggle="tooltip" data-bs-placement="top" title="<?= e(movement_tooltip('transfer_in')); ?>">
+                                        <?= e(number_format((float) $transfer['quantity'], 2, ',', ' ')); ?>
+                                        <i class="bi bi-info-circle ms-1"></i>
+                                    </span>
+                                </td>
                                 <td><?= e(date('d/m/Y H:i', strtotime((string) $transfer['created_at']))); ?></td>
                                 <td><?= e($transfer['user_name'] ?: '—'); ?></td>
                             </tr>

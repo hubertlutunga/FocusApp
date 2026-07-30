@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', function () {
+    if (window.bootstrap) {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+            window.bootstrap.Tooltip.getOrCreateInstance(element);
+        });
+    }
+
     const appShell = document.body;
     const sidebar = document.getElementById('appSidebar');
     const sidebarOverlay = document.querySelector('[data-sidebar-overlay]');

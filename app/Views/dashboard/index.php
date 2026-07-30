@@ -6,7 +6,7 @@
                 <p class="text-muted mb-0">Filtrez les ventes par boutique et consultez le stock disponible par emplacement.</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
-                <a href="<?= e(url('/products/catalog')); ?>" class="btn btn-outline-primary"><i class="bi bi-images me-1"></i> Catalogue photos</a>
+                <a href="<?= e(url('/products/catalog')); ?>" class="btn btn-outline-primary"><i class="bi bi-images me-1"></i> Catalogue</a>
                 <?php if (user_can_access_stock_management() || user_is_admin()): ?>
                     <a href="<?= e(url('/stock')); ?>" class="btn btn-primary"><i class="bi bi-boxes me-1"></i> Stock complet</a>
                 <?php endif; ?>
@@ -594,7 +594,12 @@
                                 </div>
                                 <div class="text-end">
                                     <div class="fw-semibold <?= $isExit ? 'text-danger' : 'text-success'; ?>"><?= e(number_format(abs((float) $movement['quantity']), 2, ',', ' ')); ?></div>
-                                    <div class="table-cell-meta"><?= e(movement_label($movement['movement_type'] ?? 'manual')); ?></div>
+                                    <div class="table-cell-meta">
+                                        <span data-bs-toggle="tooltip" data-bs-placement="top" title="<?= e(movement_tooltip($movement['movement_type'] ?? 'manual')); ?>">
+                                            <?= e(movement_label($movement['movement_type'] ?? 'manual')); ?>
+                                            <i class="bi bi-info-circle ms-1"></i>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
