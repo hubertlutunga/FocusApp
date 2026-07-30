@@ -222,6 +222,7 @@ final class DocumentPdfService
             'Compte USD' => trim((string) ($company['bank_account_usd'] ?? '')),
             'Compte CDF' => trim((string) ($company['bank_account_cdf'] ?? '')),
             'SWIFT' => trim((string) ($company['swift_code'] ?? '')),
+            'IBAN' => trim((string) ($company['iban'] ?? '')),
         ], static fn (string $value): bool => $value !== '');
 
         if ($details === []) {

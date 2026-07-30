@@ -100,6 +100,7 @@ CREATE TABLE company_settings (
     bank_account_usd VARCHAR(100) NULL,
     bank_account_cdf VARCHAR(100) NULL,
     swift_code VARCHAR(50) NULL,
+    iban VARCHAR(100) NULL,
     logo VARCHAR(255) NULL,
     currency_code VARCHAR(10) NOT NULL DEFAULT 'USD',
     quote_prefix VARCHAR(20) NOT NULL DEFAULT 'DEV',
@@ -516,7 +517,7 @@ INSERT INTO users (role_id, shop_id, full_name, email, phone, password, is_activ
 
 INSERT INTO company_settings (
     company_name, legal_name, email, phone, whatsapp, address, city, country, website, tax_id, idnat, commerce_register,
-    bank_name, bank_account_usd, bank_account_cdf, swift_code, currency_code,
+    bank_name, bank_account_usd, bank_account_cdf, swift_code, iban, currency_code,
     quote_prefix, invoice_prefix, payment_prefix, procurement_prefix, expense_prefix
 ) VALUES (
     'Focus Group',
@@ -532,6 +533,7 @@ INSERT INTO company_settings (
     '01-83-N12345X',
     'CD/KIN/RCCM/2026-A-001',
     'Banque partenaire',
+    '',
     '',
     '',
     '',

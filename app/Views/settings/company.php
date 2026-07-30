@@ -75,6 +75,10 @@
                 <input class="form-control" id="swift_code" name="swift_code" value="<?= e(old('swift_code', (string) ($settings['swift_code'] ?? ''))); ?>" placeholder="Ex. RAWBCDKI">
             </div>
             <div class="col-md-6">
+                <label class="form-label" for="iban">IBAN</label>
+                <input class="form-control" id="iban" name="iban" value="<?= e(old('iban', (string) ($settings['iban'] ?? ''))); ?>" placeholder="Ex. CD00 0000 0000 0000 0000">
+            </div>
+            <div class="col-md-6">
                 <label class="form-label" for="bank_account_usd">Numéro de compte USD</label>
                 <input class="form-control" id="bank_account_usd" name="bank_account_usd" value="<?= e(old('bank_account_usd', (string) ($settings['bank_account_usd'] ?? ''))); ?>">
             </div>
