@@ -6,7 +6,10 @@ if ($oldItems === []) {
 $selectedClient = (int) old('client_id', '0');
 $statusValue = old('status', 'draft');
 $selectedTaxRate = normalize_tax_rate(old_value('tax_rate', 0));
+$selectedCurrency = normalize_currency_code(old_value('currency_code', 'USD'));
 $taxOptions = tax_rate_options();
+$currencyOptions = currency_options();
+$exchangeRate = max((float) ($exchangeRate ?? 1), 1.0);
 ?>
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
@@ -51,6 +54,15 @@ $taxOptions = tax_rate_options();
                         <option value="<?= e((string) $rate); ?>" <?= abs($selectedTaxRate - (float) $rate) < 0.001 ? 'selected' : ''; ?>><?= e($label); ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="quoteCurrencyCode">Devise</label>
+                <select class="form-select" id="quoteCurrencyCode" name="currency_code" required>
+                    <?php foreach ($currencyOptions as $code => $label): ?>
+                        <option value="<?= e($code); ?>" <?= $selectedCurrency === $code ? 'selected' : ''; ?>><?= e($label); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="form-text">En CDF : conversion automatique avec le taux <?= e(number_format($exchangeRate, 4, ',', ' ')); ?>.</div>
             </div>
             <div class="col-12">
                 <label class="form-label" for="notes">Notes</label>
@@ -130,13 +142,21 @@ document.addEventListener('DOMContentLoaded', function () {
     const services = <?= json_encode($services, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
     const tableBody = document.querySelector('#quoteItemsTable tbody');
     const taxRateInput = document.getElementById('quoteTaxRate');
+    const currencyInput = document.getElementById('quoteCurrencyCode');
     const subtotalOutput = document.getElementById('quoteSubtotal');
     const taxLabelOutput = document.getElementById('quoteTaxLabel');
     const taxAmountOutput = document.getElementById('quoteTaxAmount');
     const grandTotalOutput = document.getElementById('quoteGrandTotal');
 
+    const exchangeRate = <?= json_encode($exchangeRate); ?>;
+
+    function displayMultiplier() {
+        return currencyInput.value === 'CDF' ? exchangeRate : 1;
+    }
+
     function formatAmount(value) {
-        return value.toFixed(2);
+        const symbol = currencyInput.value === 'CDF' ? 'CDF' : '$';
+        return value.toFixed(2) + ' ' + symbol;
     }
 
     function currentTaxRate() {
@@ -167,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function recalc(row) {
         const qty = parseFloat(row.querySelector('.quantity-input').value || '0');
         const price = parseFloat(row.querySelector('.price-input').value || '0');
-        row.querySelector('.total-input').value = (qty * price).toFixed(2);
+        row.querySelector('.total-input').value = (qty * price * displayMultiplier()).toFixed(2);
         recalcTotals();
     }
 
@@ -205,6 +225,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelectorAll('#quoteItemsTable tbody tr').forEach(bindRow);
     taxRateInput.addEventListener('change', recalcTotals);
+    currencyInput.addEventListener('change', function () {
+        tableBody.querySelectorAll('tr').forEach(recalc);
+    });
 
     document.getElementById('addQuoteRow').addEventListener('click', function () {
         const productOptions = products.map(product => `<option value="${product.id}" data-name="${product.name}" data-price="${product.sale_price}">${product.name} (${product.sku})</option>`).join('');

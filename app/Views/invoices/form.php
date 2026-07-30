@@ -8,6 +8,7 @@ $selectedTaxRate = normalize_tax_rate(old_value('tax_rate', 0));
 $selectedCurrency = normalize_currency_code(old_value('currency_code', 'USD'));
 $taxOptions = tax_rate_options();
 $currencyOptions = currency_options();
+$exchangeRate = max((float) ($exchangeRate ?? 1), 1.0);
 ?>
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
@@ -52,7 +53,7 @@ $currencyOptions = currency_options();
                         <option value="<?= e($code); ?>" <?= $selectedCurrency === $code ? 'selected' : ''; ?>><?= e($label); ?></option>
                     <?php endforeach; ?>
                 </select>
-                <div class="form-text">La devise choisie sera affichée sur la facture et le PDF.</div>
+                <div class="form-text">En CDF : conversion automatique avec le taux <?= e(number_format($exchangeRate, 4, ',', ' ')); ?>.</div>
             </div>
             <div class="col-12">
                 <label class="form-label" for="notes">Notes</label>
@@ -112,6 +113,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const taxLabelOutput = document.getElementById('invoiceTaxLabel');
     const taxAmountOutput = document.getElementById('invoiceTaxAmount');
     const grandTotalOutput = document.getElementById('invoiceGrandTotal');
+    const exchangeRate = <?= json_encode($exchangeRate); ?>;
+
+    function displayMultiplier() {
+        return currencyInput.value === 'CDF' ? exchangeRate : 1;
+    }
 
     function formatAmount(value) {
         const symbol = currencyInput.value === 'CDF' ? 'CDF' : '$';
@@ -146,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function recalc(row) {
         const qty = parseFloat(row.querySelector('.quantity-input').value || '0');
         const price = parseFloat(row.querySelector('.price-input').value || '0');
-        row.querySelector('.total-input').value = (qty * price).toFixed(2);
+        row.querySelector('.total-input').value = (qty * price * displayMultiplier()).toFixed(2);
         recalcTotals();
     }
     function syncType(row) {
@@ -179,7 +185,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     document.querySelectorAll('#invoiceItemsTable tbody tr').forEach(bindRow);
     taxRateInput.addEventListener('change', recalcTotals);
-    currencyInput.addEventListener('change', recalcTotals);
+    currencyInput.addEventListener('change', function () {
+        tableBody.querySelectorAll('tr').forEach(recalc);
+    });
     document.getElementById('addInvoiceRow').addEventListener('click', function () {
         const productOptions = products.map(product => `<option value="${product.id}" data-name="${product.name}" data-price="${product.sale_price}">${product.name} (${product.sku})</option>`).join('');
         const serviceOptions = services.map(service => `<option value="${service.id}" data-name="${service.name}" data-price="${service.unit_price}">${service.name} (${service.code})</option>`).join('');

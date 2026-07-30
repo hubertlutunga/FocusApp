@@ -1,3 +1,4 @@
+<?php $quoteCurrency = normalize_currency_code($quote['currency_code'] ?? 'USD'); ?>
 <div class="document-shell">
     <div class="document-hero quote-document-hero mb-4">
         <div>
@@ -9,7 +10,7 @@
             <span class="badge <?= e(status_badge_class($quote['status'])); ?> document-status-badge"><?= e(status_label($quote['status'])); ?></span>
             <div class="document-total-card">
                 <span>Montant proposé</span>
-                <strong><?= e(number_format((float) $quote['grand_total'], 2, ',', ' ')); ?></strong>
+                <strong><?= e(format_money($quote['grand_total'], $quoteCurrency)); ?></strong>
             </div>
         </div>
     </div>
@@ -40,9 +41,10 @@
                     <div class="document-summary-grid compact mb-4">
                         <div><span>Date d’émission</span><strong><?= e(date('d/m/Y', strtotime((string) $quote['quote_date']))); ?></strong></div>
                         <div><span>Validité</span><strong><?= e($quote['valid_until'] ? date('d/m/Y', strtotime((string) $quote['valid_until'])) : '—'); ?></strong></div>
-                        <div><span>Sous-total</span><strong><?= e(number_format((float) $quote['subtotal'], 2, ',', ' ')); ?></strong></div>
-                        <div><span><?= e(tax_rate_label($quote['tax_rate'] ?? 0)); ?></span><strong><?= e(number_format((float) $quote['tax_amount'], 2, ',', ' ')); ?></strong></div>
-                        <div class="highlight"><span>Total TTC</span><strong><?= e(number_format((float) $quote['grand_total'], 2, ',', ' ')); ?></strong></div>
+                        <div><span>Sous-total</span><strong><?= e(format_money($quote['subtotal'], $quoteCurrency)); ?></strong></div>
+                        <div><span><?= e(tax_rate_label($quote['tax_rate'] ?? 0)); ?></span><strong><?= e(format_money($quote['tax_amount'], $quoteCurrency)); ?></strong></div>
+                        <div><span>Devise</span><strong><?= e(currency_symbol($quoteCurrency)); ?></strong></div>
+                        <div class="highlight"><span>Total TTC</span><strong><?= e(format_money($quote['grand_total'], $quoteCurrency)); ?></strong></div>
                     </div>
 
                     <div class="document-section-label">Client</div>
@@ -90,8 +92,8 @@
                                         </td>
                                         <td><?= e($item['item_type']); ?></td>
                                         <td><?= e(number_format((float) $item['quantity'], 2, ',', ' ')); ?></td>
-                                        <td><?= e(number_format((float) $item['unit_price'], 2, ',', ' ')); ?></td>
-                                        <td class="fw-semibold"><?= e(number_format((float) $item['line_total'], 2, ',', ' ')); ?></td>
+                                        <td><?= e(format_money($item['unit_price'], $quoteCurrency)); ?></td>
+                                        <td class="fw-semibold"><?= e(format_money($item['line_total'], $quoteCurrency)); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

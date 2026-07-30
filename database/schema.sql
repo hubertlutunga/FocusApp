@@ -103,6 +103,7 @@ CREATE TABLE company_settings (
     iban VARCHAR(100) NULL,
     logo VARCHAR(255) NULL,
     currency_code VARCHAR(10) NOT NULL DEFAULT 'USD',
+    exchange_rate DECIMAL(18,4) NOT NULL DEFAULT 1.0000,
     quote_prefix VARCHAR(20) NOT NULL DEFAULT 'DEV',
     invoice_prefix VARCHAR(20) NOT NULL DEFAULT 'FAC',
     payment_prefix VARCHAR(20) NOT NULL DEFAULT 'PAY',
@@ -326,6 +327,7 @@ CREATE TABLE quotes (
     quote_date DATE NOT NULL,
     valid_until DATE NULL,
     status ENUM('draft', 'sent', 'approved', 'rejected', 'converted', 'cancelled') NOT NULL DEFAULT 'draft',
+    currency_code VARCHAR(10) NOT NULL DEFAULT 'USD',
     subtotal DECIMAL(18,2) NOT NULL DEFAULT 0,
     discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
     tax_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00,
@@ -517,7 +519,7 @@ INSERT INTO users (role_id, shop_id, full_name, email, phone, password, is_activ
 
 INSERT INTO company_settings (
     company_name, legal_name, email, phone, whatsapp, address, city, country, website, tax_id, idnat, commerce_register,
-    bank_name, bank_account_usd, bank_account_cdf, swift_code, iban, currency_code,
+    bank_name, bank_account_usd, bank_account_cdf, swift_code, iban, currency_code, exchange_rate,
     quote_prefix, invoice_prefix, payment_prefix, procurement_prefix, expense_prefix
 ) VALUES (
     'Focus Group',
@@ -538,6 +540,7 @@ INSERT INTO company_settings (
     '',
     '',
     'USD',
+    1.0000,
     'DEV',
     'FAC',
     'PAY',
@@ -608,8 +611,8 @@ INSERT INTO procurement_items (procurement_id, product_id, quantity, unit_cost, 
 INSERT INTO procurement_payments (procurement_id, payment_number, payment_date, amount, method, reference, notes, recorded_by) VALUES
 (1, 'RAP-2026-00001', '2026-03-01', 1300.00, 'cash', NULL, 'Règlement initial de l’approvisionnement', 3);
 
-INSERT INTO quotes (client_id, quote_number, quote_date, valid_until, status, subtotal, discount_amount, tax_rate, tax_amount, grand_total, notes, created_by) VALUES
-(1, 'DEV-2026-00001', '2026-03-10', '2026-03-20', 'converted', 690.00, 0.00, 0.00, 0.00, 690.00, 'Devis mixte produits et services', 1);
+INSERT INTO quotes (client_id, quote_number, quote_date, valid_until, status, currency_code, subtotal, discount_amount, tax_rate, tax_amount, grand_total, notes, created_by) VALUES
+(1, 'DEV-2026-00001', '2026-03-10', '2026-03-20', 'converted', 'USD', 690.00, 0.00, 0.00, 0.00, 690.00, 'Devis mixte produits et services', 1);
 
 INSERT INTO quote_items (quote_id, item_type, product_id, service_id, description, quantity, unit_price, discount_amount, tax_amount, line_total) VALUES
 (1, 'product', 1, NULL, 'Toner HP 85A', 2, 95.00, 0.00, 0.00, 190.00),

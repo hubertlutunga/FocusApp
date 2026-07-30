@@ -92,6 +92,11 @@
                 <input class="form-control" id="currency_code" name="currency_code" maxlength="10" value="<?= e(old('currency_code', (string) ($settings['currency_code'] ?? 'USD'))); ?>" required>
             </div>
             <div class="col-md-2">
+                <label class="form-label" for="exchange_rate">Taux USD → CDF</label>
+                <input type="number" step="0.0001" min="1" class="form-control" id="exchange_rate" name="exchange_rate" value="<?= e(old('exchange_rate', (string) ($settings['exchange_rate'] ?? '1'))); ?>" required>
+                <div class="form-text">Utilisé pour convertir les prix en CDF.</div>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label" for="quote_prefix">Préfixe devis</label>
                 <input class="form-control" id="quote_prefix" name="quote_prefix" maxlength="20" value="<?= e(old('quote_prefix', (string) ($settings['quote_prefix'] ?? 'DEV'))); ?>" required>
             </div>

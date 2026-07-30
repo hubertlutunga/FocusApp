@@ -30,11 +30,14 @@ final class InvoiceController extends Controller
 
     public function create(): void
     {
+        $company = (new CompanySetting())->first();
+
         $this->render('invoices.form', [
             'pageTitle' => 'Nouvelle facture',
             'clients' => (new Client())->options(),
             'products' => (new Product())->options(current_user_shop_id()),
             'services' => (new Service())->options(),
+            'exchangeRate' => $this->exchangeRate($company),
             'formAction' => url('/invoices/store'),
         ]);
     }
@@ -82,7 +85,12 @@ final class InvoiceController extends Controller
             $this->redirect('/invoices/create');
         }
 
+        $exchangeRate = $this->exchangeRate((new CompanySetting())->first());
         foreach ($items as &$item) {
+            if ($header['currency_code'] === 'CDF') {
+                $item['unit_price'] = round($item['unit_price'] * $exchangeRate, 2);
+            }
+
             $item['line_total'] = $item['quantity'] * $item['unit_price'];
             $item['tax_amount'] = round($item['line_total'] * ($header['tax_rate'] / 100), 2);
             $header['subtotal'] += $item['line_total'];
@@ -214,5 +222,10 @@ final class InvoiceController extends Controller
         }
 
         return $items;
+    }
+
+    private function exchangeRate(?array $company): float
+    {
+        return max((float) ($company['exchange_rate'] ?? 1), 1.0);
     }
 }

@@ -29,7 +29,7 @@
                                 </div>
                             </td>
                             <td><span class="badge <?= e(status_badge_class($quote['status'])); ?>"><?= e(status_label($quote['status'])); ?></span></td>
-                            <td><?= e(number_format((float) $quote['grand_total'], 2, ',', ' ')); ?></td>
+                            <td><?= e(format_money($quote['grand_total'], $quote['currency_code'] ?? 'USD')); ?></td>
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a href="<?= e(url('/quotes/show?id=' . $quote['id'])); ?>" class="btn btn-sm btn-outline-primary table-action-btn">Voir</a>

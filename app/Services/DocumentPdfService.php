@@ -21,7 +21,7 @@ final class DocumentPdfService
         $this->renderMeta($pdf, [
             'Date devis' => $quote['quote_date'],
         ]);
-        $quoteCurrency = normalize_currency_code($company['currency_code'] ?? 'USD');
+        $quoteCurrency = normalize_currency_code($quote['currency_code'] ?? ($company['currency_code'] ?? 'USD'));
         $this->renderItems($pdf, $items, $quoteCurrency);
         $this->renderTotals($pdf, (float) $quote['subtotal'], (float) $quote['discount_amount'], tax_rate_label($quote['tax_rate'] ?? 0), (float) $quote['tax_amount'], (float) $quote['grand_total'], $quoteCurrency);
         $this->renderBankDetails($pdf, $company);

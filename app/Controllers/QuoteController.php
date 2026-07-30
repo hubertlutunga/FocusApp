@@ -30,11 +30,14 @@ final class QuoteController extends Controller
 
     public function create(): void
     {
+        $company = (new CompanySetting())->first();
+
         $this->render('quotes.form', [
             'pageTitle' => 'Nouveau devis',
             'clients' => (new Client())->options(),
             'products' => (new Product())->options(),
             'services' => (new Service())->options(),
+            'exchangeRate' => $this->exchangeRate($company),
             'formAction' => url('/quotes/store'),
         ]);
     }
@@ -49,6 +52,7 @@ final class QuoteController extends Controller
             'quote_date' => (string) ($_POST['quote_date'] ?? date('Y-m-d')),
             'valid_until' => ($_POST['valid_until'] ?? '') !== '' ? (string) $_POST['valid_until'] : null,
             'status' => (string) ($_POST['status'] ?? 'draft'),
+            'currency_code' => normalize_currency_code($_POST['currency_code'] ?? 'USD'),
             'subtotal' => 0,
             'discount_amount' => 0,
             'tax_rate' => normalize_tax_rate($_POST['tax_rate'] ?? 0),
@@ -64,6 +68,7 @@ final class QuoteController extends Controller
             'quote_date' => $header['quote_date'],
             'valid_until' => $header['valid_until'],
             'status' => $header['status'],
+            'currency_code' => $header['currency_code'],
             'tax_rate' => $header['tax_rate'],
             'notes' => $header['notes'],
             'items' => $items,
@@ -74,7 +79,12 @@ final class QuoteController extends Controller
             $this->redirect('/quotes/create');
         }
 
+        $exchangeRate = $this->exchangeRate((new CompanySetting())->first());
         foreach ($items as &$item) {
+            if ($header['currency_code'] === 'CDF') {
+                $item['unit_price'] = round($item['unit_price'] * $exchangeRate, 2);
+            }
+
             $item['line_total'] = $item['quantity'] * $item['unit_price'];
             $item['tax_amount'] = round($item['line_total'] * ($header['tax_rate'] / 100), 2);
             $header['subtotal'] += $item['line_total'];
@@ -210,5 +220,10 @@ final class QuoteController extends Controller
         }
 
         return $items;
+    }
+
+    private function exchangeRate(?array $company): float
+    {
+        return max((float) ($company['exchange_rate'] ?? 1), 1.0);
     }
 }

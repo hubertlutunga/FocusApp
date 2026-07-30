@@ -119,7 +119,7 @@ final class Invoice extends Model
             'invoice_date' => $invoiceDate,
             'due_date' => $dueDate,
             'status' => 'draft',
-            'currency_code' => normalize_currency_code((new CompanySetting())->first()['currency_code'] ?? 'USD'),
+            'currency_code' => normalize_currency_code($quote['currency_code'] ?? 'USD'),
             'subtotal' => (float) $quote['subtotal'],
             'discount_amount' => (float) $quote['discount_amount'],
             'tax_rate' => (float) ($quote['tax_rate'] ?? 0),

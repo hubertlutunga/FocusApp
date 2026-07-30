@@ -47,6 +47,7 @@ final class CompanySettingController extends Controller
             'swift_code' => strtoupper(trim((string) ($_POST['swift_code'] ?? ''))),
             'iban' => strtoupper(trim((string) ($_POST['iban'] ?? ''))),
             'currency_code' => strtoupper(trim((string) ($_POST['currency_code'] ?? 'USD'))),
+            'exchange_rate' => max((float) ($_POST['exchange_rate'] ?? 1), 1),
             'quote_prefix' => strtoupper(trim((string) ($_POST['quote_prefix'] ?? 'DEV'))),
             'invoice_prefix' => strtoupper(trim((string) ($_POST['invoice_prefix'] ?? 'FAC'))),
             'payment_prefix' => strtoupper(trim((string) ($_POST['payment_prefix'] ?? 'PAY'))),
