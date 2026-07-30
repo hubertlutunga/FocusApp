@@ -81,6 +81,23 @@ if (!function_exists('asset')) {
     }
 }
 
+if (!function_exists('product_image_url')) {
+    function product_image_url(?string $path): string
+    {
+        $path = trim((string) $path);
+
+        if ($path === '') {
+            return '';
+        }
+
+        if (preg_match('/^https?:\/\//i', $path) === 1) {
+            return $path;
+        }
+
+        return project_asset(ltrim($path, '/'));
+    }
+}
+
 if (!function_exists('project_asset')) {
     function project_asset(string $path): string
     {

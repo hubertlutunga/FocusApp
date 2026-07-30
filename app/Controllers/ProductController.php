@@ -27,6 +27,18 @@ final class ProductController extends Controller
         ]);
     }
 
+    public function catalog(): void
+    {
+        $shopId = current_user_shop_id();
+
+        $this->render('products.catalog', [
+            'pageTitle' => 'Catalogue photos',
+            'products' => (new Product())->allForStock($shopId),
+            'currentShopName' => (string) (Auth::user()['shop_name'] ?? ''),
+            'isShopCatalog' => $shopId !== null,
+        ]);
+    }
+
     public function create(): void
     {
         $this->render('products.form', [

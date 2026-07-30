@@ -1,3 +1,172 @@
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 pt-4 px-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <h3 class="h5 mb-1">Vue boutiques / extensions</h3>
+                <p class="text-muted mb-0">Filtrez les ventes par boutique et consultez le stock disponible par emplacement.</p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="<?= e(url('/products/catalog')); ?>" class="btn btn-outline-primary"><i class="bi bi-images me-1"></i> Catalogue photos</a>
+                <?php if (user_can_access_stock_management() || user_is_admin()): ?>
+                    <a href="<?= e(url('/stock')); ?>" class="btn btn-primary"><i class="bi bi-boxes me-1"></i> Stock complet</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <div class="card-body px-4 pb-4">
+        <form method="get" action="<?= e(url('/dashboard')); ?>" class="row g-3 align-items-end mb-4">
+            <div class="col-md-4">
+                <label class="form-label" for="dashboard_shop">Boutique</label>
+                <select class="form-select" id="dashboard_shop" name="dashboard_shop" <?= (!user_is_admin() && current_user_shop_id() !== null) ? 'disabled' : ''; ?>>
+                    <option value="" <?= ($dashboardShopFilter ?? '') === '' ? 'selected' : ''; ?>>Toutes les boutiques</option>
+                    <option value="central" <?= ($dashboardShopFilter ?? '') === 'central' ? 'selected' : ''; ?>>Stock général / siège</option>
+                    <?php foreach (($shopOptions ?? []) as $shopOption): ?>
+                        <option value="<?= e((string) $shopOption['id']); ?>" <?= (string) ($dashboardShopFilter ?? '') === (string) $shopOption['id'] ? 'selected' : ''; ?>><?= e($shopOption['name'] . ' (' . $shopOption['code'] . ')'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if (!user_is_admin() && current_user_shop_id() !== null): ?>
+                    <input type="hidden" name="dashboard_shop" value="<?= e((string) current_user_shop_id()); ?>">
+                <?php endif; ?>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="shop_sales_date_from">Ventes du</label>
+                <input type="date" id="shop_sales_date_from" name="sales_date_from" class="form-control" value="<?= e((string) ($salesDateFrom ?? '')); ?>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="shop_sales_date_to">Au</label>
+                <input type="date" id="shop_sales_date_to" name="sales_date_to" class="form-control" value="<?= e((string) ($salesDateTo ?? '')); ?>">
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-primary flex-fill">Filtrer</button>
+                <a href="<?= e(url('/dashboard')); ?>" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6 col-xl-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="metric-icon primary"><i class="bi bi-shop"></i></span>
+                        <div>
+                            <p class="text-muted mb-1"><?= e($dashboardShopLabel ?? 'Toutes les boutiques'); ?></p>
+                            <h3 class="mb-0 text-amount"><?= e(format_money($dashboardShopOverview['total_sales'] ?? 0, 'USD')); ?></h3>
+                            <small class="metric-subnote">Ventes totales filtrées</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="metric-icon success"><i class="bi bi-calendar-day"></i></span>
+                        <div>
+                            <p class="text-muted mb-1">Aujourd’hui</p>
+                            <h3 class="mb-0 text-amount"><?= e(format_money($dashboardShopOverview['today_sales'] ?? 0, 'USD')); ?></h3>
+                            <small class="metric-subnote">Mois : <?= e(format_money($dashboardShopOverview['month_sales'] ?? 0, 'USD')); ?></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="metric-icon warning"><i class="bi bi-receipt"></i></span>
+                        <div>
+                            <p class="text-muted mb-1">Factures</p>
+                            <h3 class="mb-0"><?= e((string) ($dashboardShopOverview['invoice_count'] ?? 0)); ?></h3>
+                            <small class="metric-subnote">Solde : <?= e(format_money($dashboardShopOverview['outstanding_total'] ?? 0, 'USD')); ?></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card metric-card h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="metric-icon danger"><i class="bi bi-box-seam"></i></span>
+                        <div>
+                            <p class="text-muted mb-1">Stock disponible</p>
+                            <h3 class="mb-0"><?= e((string) ($dashboardShopOverview['available_products'] ?? 0)); ?></h3>
+                            <small class="metric-subnote">Valeur : <?= e(format_money($dashboardShopOverview['stock_value'] ?? 0, 'USD')); ?></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card h-100 border-light-subtle">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h4 class="h6 mb-1">Dernières ventes filtrées</h4>
+                        <p class="text-muted mb-0">Factures récentes pour la boutique ou l’ensemble sélectionné.</p>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <?php if (($dashboardShopSalesRows ?? []) === []): ?>
+                            <div class="empty-state py-4"><i class="bi bi-receipt"></i><div>Aucune vente pour ce filtre.</div></div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-striped align-middle mb-0">
+                                    <thead><tr><th>Facture</th><th>Boutique</th><th class="text-end">Total</th></tr></thead>
+                                    <tbody>
+                                        <?php foreach ($dashboardShopSalesRows as $saleRow): ?>
+                                            <tr>
+                                                <td>
+                                                    <div class="table-cell-stack">
+                                                        <div class="table-cell-main"><?= e($saleRow['invoice_number']); ?></div>
+                                                        <div class="table-cell-meta"><?= e($saleRow['client_name']); ?> · <?= e(date('d/m/Y', strtotime((string) $saleRow['invoice_date']))); ?></div>
+                                                        <span class="badge <?= e(status_badge_class($saleRow['status'])); ?>"><?= e(status_label($saleRow['status'])); ?></span>
+                                                    </div>
+                                                </td>
+                                                <td><?= e($saleRow['shop_name']); ?></td>
+                                                <td class="text-end text-amount"><?= e(format_money($saleRow['grand_total'], $saleRow['currency_code'] ?? 'USD')); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100 border-light-subtle">
+                    <div class="card-header bg-white border-0 pt-4 px-4">
+                        <h4 class="h6 mb-1">Stock disponible</h4>
+                        <p class="text-muted mb-0">Produits disponibles par boutique ou stock général.</p>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <?php if (($dashboardShopStockRows ?? []) === []): ?>
+                            <div class="empty-state py-4"><i class="bi bi-box-seam"></i><div>Aucun stock disponible pour ce filtre.</div></div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-striped align-middle mb-0">
+                                    <thead><tr><th>Produit</th><th>Emplacement</th><th class="text-end">Stock</th><th class="text-end">Prix</th></tr></thead>
+                                    <tbody>
+                                        <?php foreach ($dashboardShopStockRows as $stockRow): ?>
+                                            <?php $isLowStock = (float) $stockRow['current_stock'] <= (float) $stockRow['minimum_stock']; ?>
+                                            <tr>
+                                                <td>
+                                                    <div class="table-cell-stack">
+                                                        <div class="table-cell-main"><?= e($stockRow['name']); ?></div>
+                                                        <div class="table-cell-meta"><?= e($stockRow['sku']); ?></div>
+                                                    </div>
+                                                </td>
+                                                <td><?= e($stockRow['location_name']); ?></td>
+                                                <td class="text-end fw-semibold <?= $isLowStock ? 'text-danger' : 'text-success'; ?>"><?= e(number_format((float) $stockRow['current_stock'], 2, ',', ' ')); ?> <?= e($stockRow['unit_symbol']); ?></td>
+                                                <td class="text-end text-amount"><?= e(format_money($stockRow['sale_price'], 'USD')); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php if (!empty($isCashierDashboard)): ?>
 <div class="row g-3 mb-4">
     <div class="col-md-6 col-xl-3">
@@ -94,15 +263,16 @@
                                 <div class="table-cell-stack">
                                     <div class="table-cell-main"><?= e($invoice['invoice_number']); ?></div>
                                     <div class="table-cell-meta"><?= e($invoice['client_name']); ?></div>
+                                    <div class="table-cell-meta">Boutique : <?= e($invoice['shop_name'] ?: 'Stock général / siège'); ?></div>
                                     <div class="table-cell-meta"><?= e(date('d/m/Y', strtotime((string) $invoice['invoice_date']))); ?></div>
                                 </div>
                             </td>
                             <td><span class="badge <?= e(status_badge_class($invoice['status'])); ?>" data-role="invoice-status-badge"><?= e(status_label($invoice['status'])); ?></span></td>
                             <td>
                                 <div class="table-cell-stack" data-role="invoice-amounts">
-                                    <div class="table-cell-main text-amount"><?= e(number_format((float) $invoice['grand_total'], 2, ',', ' ')); ?></div>
-                                    <div class="table-cell-meta" data-role="invoice-paid-label">Payé : <?= e(number_format((float) $invoice['amount_paid'], 2, ',', ' ')); ?></div>
-                                    <div class="table-cell-meta" data-role="invoice-balance-label">Solde : <?= e(number_format((float) $invoice['balance_due'], 2, ',', ' ')); ?></div>
+                                    <div class="table-cell-main text-amount"><?= e(format_money($invoice['grand_total'], $invoice['currency_code'] ?? 'USD')); ?></div>
+                                    <div class="table-cell-meta" data-role="invoice-paid-label">Payé : <?= e(format_money($invoice['amount_paid'], $invoice['currency_code'] ?? 'USD')); ?></div>
+                                    <div class="table-cell-meta" data-role="invoice-balance-label">Solde : <?= e(format_money($invoice['balance_due'], $invoice['currency_code'] ?? 'USD')); ?></div>
                                 </div>
                             </td>
                             <td class="text-end">
@@ -118,7 +288,7 @@
                                             data-invoice-number="<?= e($invoice['invoice_number']); ?>"
                                             data-client-name="<?= e($invoice['client_name']); ?>"
                                             data-balance-due="<?= e(number_format((float) $invoice['balance_due'], 2, '.', '')); ?>"
-                                            data-balance-label="<?= e(number_format((float) $invoice['balance_due'], 2, ',', ' ')); ?>">
+                                            data-balance-label="<?= e(format_money($invoice['balance_due'], $invoice['currency_code'] ?? 'USD')); ?>">
                                             Encaisser
                                         </button>
                                     <?php endif; ?>

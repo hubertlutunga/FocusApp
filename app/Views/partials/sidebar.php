@@ -20,7 +20,7 @@ $matchesGroup = static function (array $paths) use ($currentPath): bool {
 $adminPaths = ['/users', '/users/create', '/users/edit', '/shops', '/shops/create', '/shops/edit', '/settings/company', '/activity-logs'];
 $referencePaths = ['/clients', '/clients/create', '/clients/edit', '/suppliers', '/suppliers/create', '/suppliers/edit', '/categories', '/categories/create', '/categories/edit', '/units', '/units/create', '/units/edit'];
 $stockPaths = ['/products', '/products/create', '/products/edit', '/services', '/services/create', '/services/edit', '/stock', '/procurements', '/procurements/create', '/procurements/show'];
-$commercialPaths = ['/quotes', '/quotes/create', '/quotes/show', '/invoices', '/invoices/create', '/invoices/show', '/payments', '/payments/create'];
+$commercialPaths = ['/quotes', '/quotes/create', '/quotes/show', '/invoices', '/invoices/create', '/invoices/show', '/payments', '/payments/create', '/products/catalog'];
 $pilotagePaths = ['/expenses', '/expenses/create', '/expenses/show', '/expenses/edit', '/reports'];
 
 $adminOpen = $matchesGroup($adminPaths);
@@ -110,6 +110,7 @@ $canAccessStock = user_can_access_stock_management();
                 <div class="sidebar-subnav">
                     <a class="nav-link <?= is_active_path(['/quotes','/quotes/create','/quotes/show']); ?>" href="<?= e(url('/quotes')); ?>"><i class="bi bi-file-earmark-text"></i><span>Devis</span></a>
                     <a class="nav-link <?= is_active_path(['/invoices','/invoices/create','/invoices/show']); ?>" href="<?= e(url('/invoices')); ?>"><i class="bi bi-receipt-cutoff"></i><span>Factures</span></a>
+                    <a class="nav-link <?= is_active_path(['/products/catalog']); ?>" href="<?= e(url('/products/catalog')); ?>"><i class="bi bi-images"></i><span>Catalogue photos</span></a>
                     <a class="nav-link <?= is_active_path(['/payments','/payments/create']); ?>" href="<?= e(url('/payments')); ?>"><i class="bi bi-cash-stack"></i><span>Paiements</span></a>
                 </div>
             </div>

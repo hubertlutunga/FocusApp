@@ -78,6 +78,7 @@ $router->post('/units/update', [UnitController::class, 'update'], [AdminMiddlewa
 $router->post('/units/delete', [UnitController::class, 'delete'], [AdminMiddleware::class]);
 
 $router->get('/products', [ProductController::class, 'index'], [StockManagerMiddleware::class]);
+$router->get('/products/catalog', [ProductController::class, 'catalog'], [CommercialMiddleware::class]);
 $router->get('/products/create', [ProductController::class, 'create'], [StockManagerMiddleware::class]);
 $router->post('/products/store', [ProductController::class, 'store'], [StockManagerMiddleware::class]);
 $router->get('/products/edit', [ProductController::class, 'edit'], [AdminMiddleware::class]);

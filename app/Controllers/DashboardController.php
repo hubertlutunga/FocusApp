@@ -11,6 +11,7 @@ use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Report;
+use App\Models\Shop;
 use App\Models\StockMovement;
 use PDOException;
 
@@ -27,6 +28,13 @@ final class DashboardController extends Controller
         $analysisDateFrom = $this->normalizeFilterDate((string) ($_GET['analysis_date_from'] ?? ''), date('Y-m-01'));
         $analysisDateTo = $this->normalizeFilterDate((string) ($_GET['analysis_date_to'] ?? ''), date('Y-m-d'));
         $analysisProductId = $this->normalizeFilterProductId($_GET['analysis_product_id'] ?? null);
+        $shopOptions = (new Shop())->options(false);
+        $currentShopId = current_user_shop_id();
+        $dashboardShopFilter = $this->normalizeShopFilter($_GET['dashboard_shop'] ?? '', $shopOptions);
+
+        if ($isCashierDashboard && !$isAdminDashboard && $currentShopId !== null) {
+            $dashboardShopFilter = (string) $currentShopId;
+        }
 
         if ($analysisDateFrom > $analysisDateTo) {
             [$analysisDateFrom, $analysisDateTo] = [$analysisDateTo, $analysisDateFrom];
@@ -43,14 +51,14 @@ final class DashboardController extends Controller
             'stock_value' => (float) $db->query('SELECT COALESCE(SUM(current_stock * sale_price), 0) FROM products WHERE deleted_at IS NULL')->fetchColumn(),
         ];
 
-        $salesStatement = $db->query(
-            "SELECT DATE_FORMAT(invoice_date, '%Y-%m') AS period, COALESCE(SUM(grand_total), 0) AS total
-             FROM invoices
-             WHERE deleted_at IS NULL AND status IN ('validated', 'partial_paid', 'paid')
-             GROUP BY DATE_FORMAT(invoice_date, '%Y-%m')
-             ORDER BY period ASC
-             LIMIT 6"
-        );
+           $chartSql = "SELECT DATE_FORMAT(i.invoice_date, '%Y-%m') AS period, COALESCE(SUM(i.grand_total), 0) AS total
+               FROM invoices i
+               WHERE i.deleted_at IS NULL AND i.status IN ('validated', 'partial_paid', 'paid')";
+           $chartParams = [];
+           $this->appendInvoiceShopFilter($chartSql, $chartParams, $dashboardShopFilter, 'i');
+           $chartSql .= " GROUP BY DATE_FORMAT(i.invoice_date, '%Y-%m') ORDER BY period ASC LIMIT 6";
+           $salesStatement = $db->prepare($chartSql);
+           $salesStatement->execute($chartParams);
 
         $salesData = $salesStatement->fetchAll();
 
@@ -65,21 +73,22 @@ final class DashboardController extends Controller
         $stockChartData = null;
         $stockCriticalProducts = [];
         $stockRecentMovements = [];
+        $dashboardShopOverview = $this->shopDashboardOverview($dashboardShopFilter);
+        $dashboardShopSalesRows = $this->shopSalesRows($dashboardShopFilter, $salesDateFrom, $salesDateTo);
+        $dashboardShopStockRows = $this->shopStockRows($dashboardShopFilter);
+        $dashboardShopLabel = $this->shopFilterLabel($dashboardShopFilter, $shopOptions);
 
         if ($isCashierDashboard) {
-            $cashierOverview = [
-                'total_sales' => (float) $db->query("SELECT COALESCE(SUM(grand_total), 0) FROM invoices WHERE deleted_at IS NULL AND status IN ('validated', 'partial_paid', 'paid')")->fetchColumn(),
-                'today_sales' => (float) $db->query("SELECT COALESCE(SUM(grand_total), 0) FROM invoices WHERE deleted_at IS NULL AND status IN ('validated', 'partial_paid', 'paid') AND invoice_date = CURDATE()")->fetchColumn(),
-                'month_sales' => (float) $db->query("SELECT COALESCE(SUM(grand_total), 0) FROM invoices WHERE deleted_at IS NULL AND status IN ('validated', 'partial_paid', 'paid') AND YEAR(invoice_date) = YEAR(CURDATE()) AND MONTH(invoice_date) = MONTH(CURDATE())")->fetchColumn(),
-                'year_sales' => (float) $db->query("SELECT COALESCE(SUM(grand_total), 0) FROM invoices WHERE deleted_at IS NULL AND status IN ('validated', 'partial_paid', 'paid') AND YEAR(invoice_date) = YEAR(CURDATE())")->fetchColumn(),
-            ];
+            $cashierOverview = $this->cashierOverview($dashboardShopFilter);
 
-            $salesSql = 'SELECT i.*, c.company_name AS client_name, u.full_name AS user_name
+            $salesSql = 'SELECT i.*, c.company_name AS client_name, u.full_name AS user_name, s.name AS shop_name
                         FROM invoices i
                         INNER JOIN clients c ON c.id = i.client_id
                         INNER JOIN users u ON u.id = i.created_by
+                        LEFT JOIN shops s ON s.id = i.shop_id
                         WHERE i.deleted_at IS NULL';
             $salesParams = [];
+            $this->appendInvoiceShopFilter($salesSql, $salesParams, $dashboardShopFilter, 'i');
 
             if ($salesDateFrom !== '') {
                 $salesSql .= ' AND i.invoice_date >= :sales_date_from';
@@ -308,6 +317,12 @@ final class DashboardController extends Controller
             'salesAnalysis' => $salesAnalysis,
             'salesDateFrom' => $salesDateFrom,
             'salesDateTo' => $salesDateTo,
+            'shopOptions' => $shopOptions,
+            'dashboardShopFilter' => $dashboardShopFilter,
+            'dashboardShopLabel' => $dashboardShopLabel,
+            'dashboardShopOverview' => $dashboardShopOverview,
+            'dashboardShopSalesRows' => $dashboardShopSalesRows,
+            'dashboardShopStockRows' => $dashboardShopStockRows,
             'stats' => $stats,
             'adminOverview' => $adminOverview,
             'adminChartData' => $adminChartData,
@@ -343,5 +358,244 @@ final class DashboardController extends Controller
         $productId = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
         return $productId === false ? null : (int) $productId;
+    }
+
+    private function normalizeShopFilter(mixed $value, array $shopOptions): string
+    {
+        $filter = trim((string) $value);
+
+        if ($filter === '' || $filter === 'all') {
+            return '';
+        }
+
+        if ($filter === 'central') {
+            return 'central';
+        }
+
+        $shopId = filter_var($filter, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($shopId === false) {
+            return '';
+        }
+
+        foreach ($shopOptions as $shop) {
+            if ((int) $shop['id'] === (int) $shopId) {
+                return (string) $shopId;
+            }
+        }
+
+        return '';
+    }
+
+    private function appendInvoiceShopFilter(string &$sql, array &$params, string $shopFilter, string $alias = 'i'): void
+    {
+        if ($shopFilter === '') {
+            return;
+        }
+
+        if ($shopFilter === 'central') {
+            $sql .= ' AND ' . $alias . '.shop_id IS NULL';
+            return;
+        }
+
+        $sql .= ' AND ' . $alias . '.shop_id = :dashboard_shop_id';
+        $params['dashboard_shop_id'] = (int) $shopFilter;
+    }
+
+    private function cashierOverview(string $shopFilter): array
+    {
+        $db = Database::connection();
+        $baseSql = "FROM invoices i WHERE i.deleted_at IS NULL AND i.status IN ('validated', 'partial_paid', 'paid')";
+        $params = [];
+        $this->appendInvoiceShopFilter($baseSql, $params, $shopFilter, 'i');
+
+        return [
+            'total_sales' => $this->sumInvoiceAmount('i.grand_total', $baseSql, $params),
+            'today_sales' => $this->sumInvoiceAmount('i.grand_total', $baseSql . ' AND i.invoice_date = CURDATE()', $params),
+            'month_sales' => $this->sumInvoiceAmount('i.grand_total', $baseSql . ' AND YEAR(i.invoice_date) = YEAR(CURDATE()) AND MONTH(i.invoice_date) = MONTH(CURDATE())', $params),
+            'year_sales' => $this->sumInvoiceAmount('i.grand_total', $baseSql . ' AND YEAR(i.invoice_date) = YEAR(CURDATE())', $params),
+        ];
+    }
+
+    private function sumInvoiceAmount(string $field, string $fromSql, array $params): float
+    {
+        $statement = Database::connection()->prepare('SELECT COALESCE(SUM(' . $field . '), 0) ' . $fromSql);
+        $statement->execute($params);
+
+        return (float) $statement->fetchColumn();
+    }
+
+    private function shopDashboardOverview(string $shopFilter): array
+    {
+        $db = Database::connection();
+        $invoiceSql = "FROM invoices i WHERE i.deleted_at IS NULL AND i.status IN ('validated', 'partial_paid', 'paid')";
+        $invoiceParams = [];
+        $this->appendInvoiceShopFilter($invoiceSql, $invoiceParams, $shopFilter, 'i');
+
+        $invoiceCountStatement = $db->prepare('SELECT COUNT(*) ' . $invoiceSql);
+        $invoiceCountStatement->execute($invoiceParams);
+
+        $outstandingSql = "FROM invoices i WHERE i.deleted_at IS NULL AND i.status IN ('validated', 'partial_paid') AND i.balance_due > 0";
+        $outstandingParams = [];
+        $this->appendInvoiceShopFilter($outstandingSql, $outstandingParams, $shopFilter, 'i');
+        $outstandingStatement = $db->prepare('SELECT COALESCE(SUM(i.balance_due), 0) ' . $outstandingSql);
+        $outstandingStatement->execute($outstandingParams);
+
+        return [
+            'total_sales' => $this->sumInvoiceAmount('i.grand_total', $invoiceSql, $invoiceParams),
+            'today_sales' => $this->sumInvoiceAmount('i.grand_total', $invoiceSql . ' AND i.invoice_date = CURDATE()', $invoiceParams),
+            'month_sales' => $this->sumInvoiceAmount('i.grand_total', $invoiceSql . ' AND YEAR(i.invoice_date) = YEAR(CURDATE()) AND MONTH(i.invoice_date) = MONTH(CURDATE())', $invoiceParams),
+            'invoice_count' => (int) $invoiceCountStatement->fetchColumn(),
+            'outstanding_total' => (float) $outstandingStatement->fetchColumn(),
+            'stock_value' => $this->stockValueForFilter($shopFilter),
+            'available_products' => $this->availableProductsForFilter($shopFilter),
+        ];
+    }
+
+    private function stockValueForFilter(string $shopFilter): float
+    {
+        $db = Database::connection();
+
+        if ($shopFilter === 'central') {
+            return (float) $db->query('SELECT COALESCE(SUM(current_stock * sale_price), 0) FROM products WHERE deleted_at IS NULL AND is_active = 1')->fetchColumn();
+        }
+
+        if ($shopFilter !== '') {
+            $statement = $db->prepare('SELECT COALESCE(SUM(ps.current_stock * p.sale_price), 0)
+                FROM product_stocks ps
+                INNER JOIN products p ON p.id = ps.product_id
+                WHERE p.deleted_at IS NULL AND p.is_active = 1 AND ps.shop_id = :shop_id');
+            $statement->execute(['shop_id' => (int) $shopFilter]);
+
+            return (float) $statement->fetchColumn();
+        }
+
+        $centralValue = (float) $db->query('SELECT COALESCE(SUM(current_stock * sale_price), 0) FROM products WHERE deleted_at IS NULL AND is_active = 1')->fetchColumn();
+        $shopsValue = (float) $db->query('SELECT COALESCE(SUM(ps.current_stock * p.sale_price), 0)
+            FROM product_stocks ps
+            INNER JOIN products p ON p.id = ps.product_id
+            WHERE p.deleted_at IS NULL AND p.is_active = 1')->fetchColumn();
+
+        return $centralValue + $shopsValue;
+    }
+
+    private function availableProductsForFilter(string $shopFilter): int
+    {
+        $db = Database::connection();
+
+        if ($shopFilter === 'central') {
+            return (int) $db->query('SELECT COUNT(*) FROM products WHERE deleted_at IS NULL AND is_active = 1 AND current_stock > 0')->fetchColumn();
+        }
+
+        if ($shopFilter !== '') {
+            $statement = $db->prepare('SELECT COUNT(*)
+                FROM product_stocks ps
+                INNER JOIN products p ON p.id = ps.product_id
+                WHERE p.deleted_at IS NULL AND p.is_active = 1 AND ps.shop_id = :shop_id AND ps.current_stock > 0');
+            $statement->execute(['shop_id' => (int) $shopFilter]);
+
+            return (int) $statement->fetchColumn();
+        }
+
+        $centralProducts = (int) $db->query('SELECT COUNT(*) FROM products WHERE deleted_at IS NULL AND is_active = 1 AND current_stock > 0')->fetchColumn();
+        $shopProducts = (int) $db->query('SELECT COUNT(*)
+            FROM product_stocks ps
+            INNER JOIN products p ON p.id = ps.product_id
+            WHERE p.deleted_at IS NULL AND p.is_active = 1 AND ps.current_stock > 0')->fetchColumn();
+
+        return $centralProducts + $shopProducts;
+    }
+
+    private function shopSalesRows(string $shopFilter, string $dateFrom, string $dateTo): array
+    {
+        $sql = 'SELECT i.id, i.invoice_number, i.invoice_date, i.status, i.currency_code, i.grand_total, i.amount_paid, i.balance_due,
+                    c.company_name AS client_name, COALESCE(s.name, \'Stock général / siège\') AS shop_name
+                FROM invoices i
+                INNER JOIN clients c ON c.id = i.client_id
+                LEFT JOIN shops s ON s.id = i.shop_id
+                WHERE i.deleted_at IS NULL';
+        $params = [];
+        $this->appendInvoiceShopFilter($sql, $params, $shopFilter, 'i');
+
+        if ($dateFrom !== '') {
+            $sql .= ' AND i.invoice_date >= :shop_sales_date_from';
+            $params['shop_sales_date_from'] = $dateFrom;
+        }
+
+        if ($dateTo !== '') {
+            $sql .= ' AND i.invoice_date <= :shop_sales_date_to';
+            $params['shop_sales_date_to'] = $dateTo;
+        }
+
+        $sql .= ' ORDER BY i.id DESC LIMIT 15';
+        $statement = Database::connection()->prepare($sql);
+        $statement->execute($params);
+
+        return $statement->fetchAll();
+    }
+
+    private function shopStockRows(string $shopFilter): array
+    {
+        $db = Database::connection();
+
+        if ($shopFilter === 'central') {
+            return $db->query("SELECT p.id, p.sku, p.name, p.sale_price, p.current_stock, p.minimum_stock, u.symbol AS unit_symbol, 'Stock général / siège' AS location_name
+                FROM products p
+                INNER JOIN units u ON u.id = p.unit_id
+                WHERE p.deleted_at IS NULL AND p.is_active = 1
+                ORDER BY p.current_stock DESC, p.name ASC
+                LIMIT 20")->fetchAll();
+        }
+
+        if ($shopFilter !== '') {
+            $statement = $db->prepare('SELECT p.id, p.sku, p.name, p.sale_price, COALESCE(ps.current_stock, 0) AS current_stock, COALESCE(ps.minimum_stock, p.minimum_stock) AS minimum_stock, u.symbol AS unit_symbol, s.name AS location_name
+                FROM products p
+                INNER JOIN units u ON u.id = p.unit_id
+                INNER JOIN shops s ON s.id = :shop_id
+                LEFT JOIN product_stocks ps ON ps.product_id = p.id AND ps.shop_id = :shop_stock_id
+                WHERE p.deleted_at IS NULL AND p.is_active = 1
+                ORDER BY current_stock DESC, p.name ASC
+                LIMIT 20');
+            $statement->execute([
+                'shop_id' => (int) $shopFilter,
+                'shop_stock_id' => (int) $shopFilter,
+            ]);
+
+            return $statement->fetchAll();
+        }
+
+        return $db->query("SELECT * FROM (
+                SELECT p.id, p.sku, p.name, p.sale_price, p.current_stock, p.minimum_stock, u.symbol AS unit_symbol, 'Stock général / siège' AS location_name
+                FROM products p
+                INNER JOIN units u ON u.id = p.unit_id
+                WHERE p.deleted_at IS NULL AND p.is_active = 1
+                UNION ALL
+                SELECT p.id, p.sku, p.name, p.sale_price, ps.current_stock, COALESCE(ps.minimum_stock, p.minimum_stock) AS minimum_stock, u.symbol AS unit_symbol, s.name AS location_name
+                FROM product_stocks ps
+                INNER JOIN products p ON p.id = ps.product_id
+                INNER JOIN units u ON u.id = p.unit_id
+                INNER JOIN shops s ON s.id = ps.shop_id
+                WHERE p.deleted_at IS NULL AND p.is_active = 1
+            ) stock_rows
+            ORDER BY location_name ASC, current_stock DESC, name ASC
+            LIMIT 30")->fetchAll();
+    }
+
+    private function shopFilterLabel(string $shopFilter, array $shopOptions): string
+    {
+        if ($shopFilter === '') {
+            return 'Toutes les boutiques';
+        }
+
+        if ($shopFilter === 'central') {
+            return 'Stock général / siège';
+        }
+
+        foreach ($shopOptions as $shop) {
+            if ((int) $shop['id'] === (int) $shopFilter) {
+                return (string) $shop['name'];
+            }
+        }
+
+        return 'Toutes les boutiques';
     }
 }
