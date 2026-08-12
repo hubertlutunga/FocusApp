@@ -58,6 +58,69 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+
+    document.addEventListener('input', function (event) {
+        const input = event.target.closest('.js-select-search');
+
+        if (!input) {
+            return;
+        }
+
+        const row = input.closest('.stock-transfer-row') || input.parentElement;
+        const selector = input.dataset.targetSelect || 'select';
+        const select = row ? row.querySelector(selector) : null;
+        const query = input.value.trim().toLowerCase();
+
+        if (!select) {
+            return;
+        }
+
+        Array.from(select.options).forEach(function (option, index) {
+            if (index === 0) {
+                option.hidden = false;
+                option.disabled = false;
+                return;
+            }
+
+            const matches = query === '' || option.textContent.toLowerCase().includes(query);
+            option.hidden = !matches;
+            option.disabled = !matches;
+        });
+
+        if (select.selectedOptions[0] && select.selectedOptions[0].disabled) {
+            select.value = '';
+        }
+    });
+
+    document.addEventListener('click', function (event) {
+        const addButton = event.target.closest('.js-add-stock-row');
+        if (addButton) {
+            const form = addButton.closest('.stock-multi-form');
+            const template = form ? document.getElementById(form.dataset.rowTemplate || '') : null;
+            const container = form ? document.getElementById(form.dataset.rowContainer || '') : null;
+
+            if (template && container) {
+                container.appendChild(template.content.cloneNode(true));
+                container.querySelectorAll('.js-remove-stock-row').forEach(function (button) {
+                    button.disabled = container.querySelectorAll('.stock-transfer-row').length <= 1;
+                });
+            }
+            return;
+        }
+
+        const removeButton = event.target.closest('.js-remove-stock-row');
+        if (removeButton) {
+            const container = removeButton.closest('.stock-transfer-rows');
+            const row = removeButton.closest('.stock-transfer-row');
+
+            if (container && row && container.querySelectorAll('.stock-transfer-row').length > 1) {
+                row.remove();
+                container.querySelectorAll('.js-remove-stock-row').forEach(function (button) {
+                    button.disabled = container.querySelectorAll('.stock-transfer-row').length <= 1;
+                });
+            }
+        }
+    });
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape' && appShell.classList.contains('sidebar-open')) {
             closeSidebar();

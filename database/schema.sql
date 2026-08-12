@@ -304,7 +304,9 @@ CREATE TABLE stock_movements (
 CREATE TABLE stock_transfers (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     product_id BIGINT UNSIGNED NOT NULL,
-    destination_shop_id BIGINT UNSIGNED NOT NULL,
+    source_shop_id BIGINT UNSIGNED NULL,
+    destination_shop_id BIGINT UNSIGNED NULL,
+    transfer_type ENUM('to_shop', 'to_central') NOT NULL DEFAULT 'to_shop',
     quantity DECIMAL(18,2) NOT NULL,
     note TEXT NULL,
     created_by BIGINT UNSIGNED NULL,
@@ -312,6 +314,7 @@ CREATE TABLE stock_transfers (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_stock_transfers_product FOREIGN KEY (product_id) REFERENCES products(id),
+    CONSTRAINT fk_stock_transfers_source_shop FOREIGN KEY (source_shop_id) REFERENCES shops(id),
     CONSTRAINT fk_stock_transfers_destination_shop FOREIGN KEY (destination_shop_id) REFERENCES shops(id),
     CONSTRAINT fk_stock_transfers_user FOREIGN KEY (created_by) REFERENCES users(id)
 ) ENGINE=InnoDB;

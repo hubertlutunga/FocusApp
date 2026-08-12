@@ -108,25 +108,76 @@ final class StockController extends Controller
             $this->redirect('/stock');
         }
 
-        $productId = (int) ($_POST['product_id'] ?? 0);
         $destinationShopId = (int) ($_POST['destination_shop_id'] ?? 0);
-        $quantity = (float) ($_POST['quantity'] ?? 0);
+        $items = $this->normalizeTransferItems($_POST['items'] ?? []);
         $note = trim((string) ($_POST['note'] ?? ''));
 
-        if ($productId <= 0 || $destinationShopId <= 0 || $quantity <= 0) {
-            Session::flash('alert', ['icon' => 'error', 'title' => 'Champs requis', 'text' => 'Produit, boutique et quantité strictement positive sont obligatoires.']);
+        if ($destinationShopId <= 0 || $items === []) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Champs requis', 'text' => 'Boutique, produit(s) et quantité(s) strictement positives sont obligatoires.']);
             $this->redirect('/stock');
         }
 
         try {
-            (new StockTransfer())->transferToShop($productId, $destinationShopId, $quantity, $note, Auth::id());
-            (new ActivityLog())->log('transfer', 'Transfert de stock vers boutique', 'stock', Auth::id());
-            Session::flash('alert', ['icon' => 'success', 'title' => 'Transfert effectué', 'text' => 'Le stock a été transféré vers la boutique sélectionnée.']);
+            $count = (new StockTransfer())->transferManyToShop($destinationShopId, $items, $note, Auth::id());
+            (new ActivityLog())->log('transfer', 'Transfert multi-produits vers boutique', 'stock', Auth::id());
+            Session::flash('alert', ['icon' => 'success', 'title' => 'Transfert effectué', 'text' => $count . ' produit(s) transféré(s) vers la boutique sélectionnée.']);
         } catch (Throwable $throwable) {
             Session::flash('alert', ['icon' => 'error', 'title' => 'Transfert impossible', 'text' => $throwable->getMessage() ?: 'Impossible de transférer ce stock.']);
         }
 
         $this->redirect('/stock');
+    }
+
+    public function returnStock(): void
+    {
+        verify_csrf();
+
+        $shopId = $this->currentShopId();
+        if ($shopId === null) {
+            Session::flash('alert', ['icon' => 'warning', 'title' => 'Action réservée', 'text' => 'Cette action est réservée aux extensions/boutiques.']);
+            $this->redirect('/stock');
+        }
+
+        $items = $this->normalizeTransferItems($_POST['items'] ?? []);
+        $note = trim((string) ($_POST['note'] ?? ''));
+
+        if ($items === []) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Champs requis', 'text' => 'Veuillez sélectionner au moins un produit avec une quantité positive.']);
+            $this->redirect('/stock');
+        }
+
+        try {
+            $count = (new StockTransfer())->returnManyToCentral($shopId, $items, $note, Auth::id());
+            (new ActivityLog())->log('return', 'Retour multi-produits vers stock général', 'stock', Auth::id());
+            Session::flash('alert', ['icon' => 'success', 'title' => 'Retour enregistré', 'text' => $count . ' produit(s) retourné(s) au stock général.']);
+        } catch (Throwable $throwable) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Retour impossible', 'text' => $throwable->getMessage() ?: 'Impossible de retourner ce stock.']);
+        }
+
+        $this->redirect('/stock');
+    }
+
+    private function normalizeTransferItems(array $input): array
+    {
+        $productIds = $input['product_id'] ?? [];
+        $quantities = $input['quantity'] ?? [];
+        $items = [];
+
+        foreach ($productIds as $index => $productId) {
+            $productId = (int) $productId;
+            $quantity = (float) ($quantities[$index] ?? 0);
+
+            if ($productId <= 0 || $quantity <= 0) {
+                continue;
+            }
+
+            $items[] = [
+                'product_id' => $productId,
+                'quantity' => $quantity,
+            ];
+        }
+
+        return $items;
     }
 
     private function currentShopId(): ?int

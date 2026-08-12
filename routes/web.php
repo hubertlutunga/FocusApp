@@ -95,6 +95,7 @@ $router->post('/services/delete', [ServiceController::class, 'delete'], [AdminMi
 $router->get('/stock', [StockController::class, 'index'], [StockManagerMiddleware::class]);
 $router->post('/stock/adjust', [StockController::class, 'adjust'], [StockManagerMiddleware::class]);
 $router->post('/stock/transfer', [StockController::class, 'transfer'], [StockManagerMiddleware::class]);
+$router->post('/stock/return', [StockController::class, 'returnStock'], [StockManagerMiddleware::class]);
 
 $router->get('/procurements', [ProcurementController::class, 'index'], [StockManagerMiddleware::class]);
 $router->get('/procurements/create', [ProcurementController::class, 'create'], [StockManagerMiddleware::class]);
