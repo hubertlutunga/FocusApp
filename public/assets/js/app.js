@@ -5,6 +5,35 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    const initializeSelect2 = function (scope) {
+        if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) {
+            return;
+        }
+
+        window.jQuery(scope || document).find('select.js-select2').each(function () {
+            const select = window.jQuery(this);
+            if (select.data('select2')) {
+                return;
+            }
+
+            select.select2({
+                width: '100%',
+                placeholder: this.dataset.placeholder || 'Rechercher et sélectionner',
+                allowClear: true,
+                language: {
+                    noResults: function () {
+                        return 'Aucun résultat trouvé';
+                    },
+                    searching: function () {
+                        return 'Recherche...';
+                    }
+                }
+            });
+        });
+    };
+
+    initializeSelect2(document);
+
     const appShell = document.body;
     const sidebar = document.getElementById('appSidebar');
     const sidebarOverlay = document.querySelector('[data-sidebar-overlay]');
@@ -101,6 +130,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (template && container) {
                 container.appendChild(template.content.cloneNode(true));
+                initializeSelect2(container);
                 container.querySelectorAll('.js-remove-stock-row').forEach(function (button) {
                     button.disabled = container.querySelectorAll('.stock-transfer-row').length <= 1;
                 });

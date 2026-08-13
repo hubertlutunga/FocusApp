@@ -82,8 +82,7 @@ $isShopStock = $currentShopId !== null;
                     <div class="row g-2 align-items-end stock-transfer-row">
                         <div class="col-md-7">
                             <label class="form-label">Produit</label>
-                            <input type="search" class="form-control form-control-sm mb-1 js-select-search" placeholder="Rechercher produit, SKU..." data-target-select=".js-product-select">
-                            <select class="form-select js-product-select" name="items[product_id][]" required>
+                            <select class="form-select js-product-select js-select2" name="items[product_id][]" data-placeholder="Rechercher et sélectionner un produit" required>
                                 <option value="">Sélectionner</option>
                                 <?php foreach ($products as $product): ?>
                                     <option value="<?= e((string) $product['id']); ?>"><?= e($product['name'] . ' (' . $product['sku'] . ') — Stock : ' . number_format((float) $product['current_stock'], 2, ',', ' ')); ?></option>
@@ -111,8 +110,7 @@ $isShopStock = $currentShopId !== null;
     <div class="row g-2 align-items-end stock-transfer-row mt-2">
         <div class="col-md-7">
             <label class="form-label">Produit</label>
-            <input type="search" class="form-control form-control-sm mb-1 js-select-search" placeholder="Rechercher produit, SKU..." data-target-select=".js-product-select">
-            <select class="form-select js-product-select" name="items[product_id][]" required>
+            <select class="form-select js-product-select js-select2" name="items[product_id][]" data-placeholder="Rechercher et sélectionner un produit" required>
                 <option value="">Sélectionner</option>
                 <?php foreach ($products as $product): ?>
                     <option value="<?= e((string) $product['id']); ?>"><?= e($product['name'] . ' (' . $product['sku'] . ') — Stock : ' . number_format((float) $product['current_stock'], 2, ',', ' ')); ?></option>
@@ -146,8 +144,7 @@ $isShopStock = $currentShopId !== null;
                     <div class="row g-2 align-items-end stock-transfer-row">
                         <div class="col-md-7">
                             <label class="form-label">Produit</label>
-                            <input type="search" class="form-control form-control-sm mb-1 js-select-search" placeholder="Rechercher produit, SKU..." data-target-select=".js-product-select">
-                            <select class="form-select js-product-select" name="items[product_id][]" required>
+                            <select class="form-select js-product-select js-select2" name="items[product_id][]" data-placeholder="Rechercher et sélectionner un produit" required>
                                 <option value="">Sélectionner</option>
                                 <?php foreach ($products as $product): ?>
                                     <option value="<?= e((string) $product['id']); ?>"><?= e($product['name'] . ' (' . $product['sku'] . ') — Stock boutique : ' . number_format((float) $product['current_stock'], 2, ',', ' ')); ?></option>
@@ -175,8 +172,7 @@ $isShopStock = $currentShopId !== null;
     <div class="row g-2 align-items-end stock-transfer-row mt-2">
         <div class="col-md-7">
             <label class="form-label">Produit</label>
-            <input type="search" class="form-control form-control-sm mb-1 js-select-search" placeholder="Rechercher produit, SKU..." data-target-select=".js-product-select">
-            <select class="form-select js-product-select" name="items[product_id][]" required>
+            <select class="form-select js-product-select js-select2" name="items[product_id][]" data-placeholder="Rechercher et sélectionner un produit" required>
                 <option value="">Sélectionner</option>
                 <?php foreach ($products as $product): ?>
                     <option value="<?= e((string) $product['id']); ?>"><?= e($product['name'] . ' (' . $product['sku'] . ') — Stock boutique : ' . number_format((float) $product['current_stock'], 2, ',', ' ')); ?></option>
