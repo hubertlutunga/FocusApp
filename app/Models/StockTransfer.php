@@ -14,12 +14,14 @@ final class StockTransfer extends Model
         $sql = 'SELECT st.*, p.sku, p.name AS product_name,
                     ss.name AS source_shop_name,
                     ds.name AS destination_shop_name,
-                    u.full_name AS user_name
+                    u.full_name AS user_name,
+                    ru.full_name AS received_by_name
                 FROM stock_transfers st
                 INNER JOIN products p ON p.id = st.product_id
                 LEFT JOIN shops ss ON ss.id = st.source_shop_id
                 LEFT JOIN shops ds ON ds.id = st.destination_shop_id
                 LEFT JOIN users u ON u.id = st.created_by
+                LEFT JOIN users ru ON ru.id = st.received_by
                 WHERE st.deleted_at IS NULL';
         $params = [];
 
@@ -34,6 +36,65 @@ final class StockTransfer extends Model
         $statement->execute($params);
 
         return $statement->fetchAll();
+    }
+
+    public function pendingForReception(?int $shopId, bool $canManageCentral): array
+    {
+        $sql = 'SELECT st.*, p.sku, p.name AS product_name,
+                    ss.name AS source_shop_name,
+                    ds.name AS destination_shop_name,
+                    u.full_name AS user_name
+                FROM stock_transfers st
+                INNER JOIN products p ON p.id = st.product_id
+                LEFT JOIN shops ss ON ss.id = st.source_shop_id
+                LEFT JOIN shops ds ON ds.id = st.destination_shop_id
+                LEFT JOIN users u ON u.id = st.created_by
+                WHERE st.deleted_at IS NULL
+                  AND st.status = :status';
+        $params = ['status' => 'pending'];
+
+        if ($shopId !== null) {
+            $sql .= ' AND st.transfer_type = :to_shop AND st.destination_shop_id = :shop_id';
+            $params['to_shop'] = 'to_shop';
+            $params['shop_id'] = $shopId;
+        } elseif ($canManageCentral) {
+            $sql .= ' AND st.transfer_type = :to_central';
+            $params['to_central'] = 'to_central';
+        } else {
+            return [];
+        }
+
+        $sql .= ' ORDER BY st.id DESC';
+
+        $statement = $this->db->prepare($sql);
+        $statement->execute($params);
+
+        return $statement->fetchAll();
+    }
+
+    public function pendingCountForReception(?int $shopId, bool $canManageCentral): int
+    {
+        $sql = 'SELECT COUNT(*)
+                FROM stock_transfers st
+                WHERE st.deleted_at IS NULL
+                  AND st.status = :status';
+        $params = ['status' => 'pending'];
+
+        if ($shopId !== null) {
+            $sql .= ' AND st.transfer_type = :to_shop AND st.destination_shop_id = :shop_id';
+            $params['to_shop'] = 'to_shop';
+            $params['shop_id'] = $shopId;
+        } elseif ($canManageCentral) {
+            $sql .= ' AND st.transfer_type = :to_central';
+            $params['to_central'] = 'to_central';
+        } else {
+            return 0;
+        }
+
+        $statement = $this->db->prepare($sql);
+        $statement->execute($params);
+
+        return (int) $statement->fetchColumn();
     }
 
     public function transferManyToShop(int $destinationShopId, array $items, string $note, ?int $userId): int
@@ -119,7 +180,7 @@ final class StockTransfer extends Model
             throw new \RuntimeException('La quantité à transférer doit être strictement positive.');
         }
 
-        $productStatement = $this->db->prepare('SELECT id, name, current_stock FROM products WHERE id = :id AND deleted_at IS NULL FOR UPDATE');
+        $productStatement = $this->db->prepare('SELECT id, name, current_stock FROM products WHERE id = :id AND deleted_at IS NULL');
         $productStatement->execute(['id' => $productId]);
         $product = $productStatement->fetch();
 
@@ -135,56 +196,7 @@ final class StockTransfer extends Model
             throw new \RuntimeException('Boutique de destination introuvable ou inactive.');
         }
 
-        $centralBefore = (float) $product['current_stock'];
-        $centralAfter = $centralBefore - $quantity;
-
-        if ($centralAfter < 0) {
-            throw new \RuntimeException('Stock général insuffisant pour ' . $product['name'] . '.');
-        }
-
-        $shopBefore = $this->shopStockForUpdate($productId, $destinationShopId);
-        $shopAfter = $shopBefore + $quantity;
-
-        $this->db->prepare('UPDATE products SET current_stock = :current_stock, updated_at = NOW() WHERE id = :id')->execute([
-            'current_stock' => $centralAfter,
-            'id' => $productId,
-        ]);
-
-        $this->upsertShopStock($productId, $destinationShopId, $shopAfter);
-
-        $transferId = $this->createTransfer($productId, null, $destinationShopId, 'to_shop', $quantity, $note, $userId);
-        $movementModel = new StockMovement();
-        $movementDate = date('Y-m-d H:i:s');
-        $movementModel->create([
-            'product_id' => $productId,
-            'movement_type' => 'transfer_out',
-            'quantity' => -$quantity,
-            'quantity_before' => $centralBefore,
-            'quantity_after' => $centralAfter,
-            'source_shop_id' => null,
-            'destination_shop_id' => $destinationShopId,
-            'reference_type' => 'stock_transfer',
-            'reference_id' => $transferId,
-            'note' => $note !== '' ? $note : 'Transfert vers ' . $shop['name'],
-            'movement_date' => $movementDate,
-            'created_by' => $userId,
-        ]);
-        $movementModel->create([
-            'product_id' => $productId,
-            'movement_type' => 'transfer_in',
-            'quantity' => $quantity,
-            'quantity_before' => $shopBefore,
-            'quantity_after' => $shopAfter,
-            'source_shop_id' => null,
-            'destination_shop_id' => $destinationShopId,
-            'reference_type' => 'stock_transfer',
-            'reference_id' => $transferId,
-            'note' => $note !== '' ? $note : 'Réception depuis le stock général',
-            'movement_date' => $movementDate,
-            'created_by' => $userId,
-        ]);
-
-        return $transferId;
+        return $this->createTransfer($productId, null, $destinationShopId, 'to_shop', $quantity, $note, $userId, 'pending');
     }
 
     private function returnToCentralInTransaction(int $sourceShopId, int $productId, float $quantity, string $note, ?int $userId): int
@@ -201,6 +213,80 @@ final class StockTransfer extends Model
             throw new \RuntimeException('Boutique source introuvable ou inactive.');
         }
 
+        $productStatement = $this->db->prepare('SELECT id, name, current_stock FROM products WHERE id = :id AND deleted_at IS NULL');
+        $productStatement->execute(['id' => $productId]);
+        $product = $productStatement->fetch();
+
+        if (!$product) {
+            throw new \RuntimeException('Produit introuvable.');
+        }
+
+        return $this->createTransfer($productId, $sourceShopId, null, 'to_central', $quantity, $note, $userId, 'pending');
+    }
+
+    public function receivePending(int $transferId, ?int $receiverUserId, ?int $receiverShopId, bool $canManageCentral): void
+    {
+        $this->db->beginTransaction();
+
+        try {
+            $statement = $this->db->prepare('SELECT * FROM stock_transfers WHERE id = :id AND deleted_at IS NULL FOR UPDATE');
+            $statement->execute(['id' => $transferId]);
+            $transfer = $statement->fetch();
+
+            if (!$transfer) {
+                throw new \RuntimeException('Transfert introuvable.');
+            }
+
+            if ((string) ($transfer['status'] ?? 'pending') !== 'pending') {
+                throw new \RuntimeException('Ce transfert a déjà été réceptionné.');
+            }
+
+            $transferType = (string) ($transfer['transfer_type'] ?? 'to_shop');
+
+            if ($transferType === 'to_shop') {
+                if ($receiverShopId === null || (int) $transfer['destination_shop_id'] !== $receiverShopId) {
+                    throw new \RuntimeException('Seule la boutique destinataire peut valider cette réception.');
+                }
+            } elseif ($transferType === 'to_central') {
+                if (!$canManageCentral) {
+                    throw new \RuntimeException('Seul le gestionnaire du stock général peut valider ce retour.');
+                }
+            }
+
+            $this->applyPendingTransfer((array) $transfer, $receiverUserId);
+
+            $update = $this->db->prepare('UPDATE stock_transfers
+                SET status = :status,
+                    received_at = NOW(),
+                    received_by = :received_by,
+                    updated_at = NOW()
+                WHERE id = :id');
+            $update->execute([
+                'status' => 'received',
+                'received_by' => $receiverUserId,
+                'id' => $transferId,
+            ]);
+
+            $this->db->commit();
+        } catch (Throwable $throwable) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+
+            throw $throwable;
+        }
+    }
+
+    private function applyPendingTransfer(array $transfer, ?int $receiverUserId): void
+    {
+        $productId = (int) $transfer['product_id'];
+        $quantity = (float) $transfer['quantity'];
+        $transferType = (string) ($transfer['transfer_type'] ?? 'to_shop');
+
+        if ($quantity <= 0) {
+            throw new \RuntimeException('Quantité de transfert invalide.');
+        }
+
         $productStatement = $this->db->prepare('SELECT id, name, current_stock FROM products WHERE id = :id AND deleted_at IS NULL FOR UPDATE');
         $productStatement->execute(['id' => $productId]);
         $product = $productStatement->fetch();
@@ -209,11 +295,83 @@ final class StockTransfer extends Model
             throw new \RuntimeException('Produit introuvable.');
         }
 
+        if ($transferType === 'to_shop') {
+            $destinationShopId = (int) ($transfer['destination_shop_id'] ?? 0);
+            $shopStatement = $this->db->prepare('SELECT id, name FROM shops WHERE id = :id AND deleted_at IS NULL AND is_active = 1 LIMIT 1');
+            $shopStatement->execute(['id' => $destinationShopId]);
+            $shop = $shopStatement->fetch();
+
+            if (!$shop) {
+                throw new \RuntimeException('Boutique destinataire introuvable ou inactive.');
+            }
+
+            $centralBefore = (float) $product['current_stock'];
+            $centralAfter = $centralBefore - $quantity;
+            if ($centralAfter < 0) {
+                throw new \RuntimeException('Stock général insuffisant pour finaliser cette réception.');
+            }
+
+            $shopBefore = $this->shopStockForUpdate($productId, $destinationShopId);
+            $shopAfter = $shopBefore + $quantity;
+
+            $this->db->prepare('UPDATE products SET current_stock = :current_stock, updated_at = NOW() WHERE id = :id')->execute([
+                'current_stock' => $centralAfter,
+                'id' => $productId,
+            ]);
+            $this->upsertShopStock($productId, $destinationShopId, $shopAfter);
+
+            $movementModel = new StockMovement();
+            $movementDate = date('Y-m-d H:i:s');
+            $movementModel->create([
+                'product_id' => $productId,
+                'movement_type' => 'transfer_out',
+                'quantity' => -$quantity,
+                'quantity_before' => $centralBefore,
+                'quantity_after' => $centralAfter,
+                'source_shop_id' => null,
+                'destination_shop_id' => $destinationShopId,
+                'reference_type' => 'stock_transfer',
+                'reference_id' => (int) $transfer['id'],
+                'note' => (string) ($transfer['note'] ?: ('Transfert vers ' . $shop['name'])),
+                'movement_date' => $movementDate,
+                'created_by' => $receiverUserId,
+            ]);
+            $movementModel->create([
+                'product_id' => $productId,
+                'movement_type' => 'transfer_in',
+                'quantity' => $quantity,
+                'quantity_before' => $shopBefore,
+                'quantity_after' => $shopAfter,
+                'source_shop_id' => null,
+                'destination_shop_id' => $destinationShopId,
+                'reference_type' => 'stock_transfer',
+                'reference_id' => (int) $transfer['id'],
+                'note' => (string) ($transfer['note'] ?: 'Réception depuis le stock général'),
+                'movement_date' => $movementDate,
+                'created_by' => $receiverUserId,
+            ]);
+
+            return;
+        }
+
+        if ($transferType !== 'to_central') {
+            throw new \RuntimeException('Type de transfert invalide.');
+        }
+
+        $sourceShopId = (int) ($transfer['source_shop_id'] ?? 0);
+        $shopStatement = $this->db->prepare('SELECT id, name FROM shops WHERE id = :id AND deleted_at IS NULL AND is_active = 1 LIMIT 1');
+        $shopStatement->execute(['id' => $sourceShopId]);
+        $shop = $shopStatement->fetch();
+
+        if (!$shop) {
+            throw new \RuntimeException('Boutique source introuvable ou inactive.');
+        }
+
         $shopBefore = $this->shopStockForUpdate($productId, $sourceShopId);
         $shopAfter = $shopBefore - $quantity;
 
         if ($shopAfter < 0) {
-            throw new \RuntimeException('Stock boutique insuffisant pour ' . $product['name'] . '.');
+            throw new \RuntimeException('Stock boutique insuffisant pour finaliser ce retour.');
         }
 
         $centralBefore = (float) $product['current_stock'];
@@ -225,7 +383,6 @@ final class StockTransfer extends Model
             'id' => $productId,
         ]);
 
-        $transferId = $this->createTransfer($productId, $sourceShopId, null, 'to_central', $quantity, $note, $userId);
         $movementModel = new StockMovement();
         $movementDate = date('Y-m-d H:i:s');
         $movementModel->create([
@@ -237,10 +394,10 @@ final class StockTransfer extends Model
             'source_shop_id' => $sourceShopId,
             'destination_shop_id' => null,
             'reference_type' => 'stock_return',
-            'reference_id' => $transferId,
-            'note' => $note !== '' ? $note : 'Retour vers stock général',
+            'reference_id' => (int) $transfer['id'],
+            'note' => (string) ($transfer['note'] ?: 'Retour vers stock général'),
             'movement_date' => $movementDate,
-            'created_by' => $userId,
+            'created_by' => $receiverUserId,
         ]);
         $movementModel->create([
             'product_id' => $productId,
@@ -251,13 +408,11 @@ final class StockTransfer extends Model
             'source_shop_id' => $sourceShopId,
             'destination_shop_id' => null,
             'reference_type' => 'stock_return',
-            'reference_id' => $transferId,
-            'note' => $note !== '' ? $note : 'Retour reçu depuis ' . $shop['name'],
+            'reference_id' => (int) $transfer['id'],
+            'note' => (string) ($transfer['note'] ?: ('Retour reçu depuis ' . $shop['name'])),
             'movement_date' => $movementDate,
-            'created_by' => $userId,
+            'created_by' => $receiverUserId,
         ]);
-
-        return $transferId;
     }
 
     private function shopStockForUpdate(int $productId, int $shopId): float
@@ -283,10 +438,10 @@ final class StockTransfer extends Model
         ]);
     }
 
-    private function createTransfer(int $productId, ?int $sourceShopId, ?int $destinationShopId, string $transferType, float $quantity, string $note, ?int $userId): int
+    private function createTransfer(int $productId, ?int $sourceShopId, ?int $destinationShopId, string $transferType, float $quantity, string $note, ?int $userId, string $status = 'pending'): int
     {
-        $transferStatement = $this->db->prepare('INSERT INTO stock_transfers (product_id, source_shop_id, destination_shop_id, transfer_type, quantity, note, created_by, created_at, updated_at)
-            VALUES (:product_id, :source_shop_id, :destination_shop_id, :transfer_type, :quantity, :note, :created_by, NOW(), NOW())');
+        $transferStatement = $this->db->prepare('INSERT INTO stock_transfers (product_id, source_shop_id, destination_shop_id, transfer_type, quantity, note, status, requested_at, created_by, created_at, updated_at)
+            VALUES (:product_id, :source_shop_id, :destination_shop_id, :transfer_type, :quantity, :note, :status, NOW(), :created_by, NOW(), NOW())');
         $transferStatement->execute([
             'product_id' => $productId,
             'source_shop_id' => $sourceShopId,
@@ -294,6 +449,7 @@ final class StockTransfer extends Model
             'transfer_type' => $transferType,
             'quantity' => $quantity,
             'note' => $note,
+            'status' => $status,
             'created_by' => $userId,
         ]);
 

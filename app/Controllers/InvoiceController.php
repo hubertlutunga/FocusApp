@@ -179,6 +179,25 @@ final class InvoiceController extends Controller
         (new DocumentPdfService())->streamInvoice($invoice, $invoiceModel->items($id));
     }
 
+    public function pos(): void
+    {
+        $id = (int) ($_GET['id'] ?? 0);
+        $invoiceModel = new Invoice();
+        $invoice = $invoiceModel->find($id);
+
+        if (!$invoice) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Facture introuvable', 'text' => 'La facture demandée n’existe pas.']);
+            $this->redirect('/invoices');
+        }
+
+        $this->render('invoices.pos', [
+            'pageTitle' => 'Impression POS',
+            'invoice' => $invoice,
+            'items' => $invoiceModel->items($id),
+            'company' => (new CompanySetting())->first(),
+        ], 'print');
+    }
+
     private function normalizeItems(array $input): array
     {
         $types = $input['item_type'] ?? [];

@@ -239,6 +239,7 @@ if (!function_exists('status_badge_class')) {
     {
         return match (strtolower(trim((string) $status))) {
             'draft' => 'badge-status badge-status-draft',
+            'pending' => 'badge-status badge-status-warning',
             'validated', 'approved', 'received', 'paid', 'active' => 'badge-status badge-status-success',
             'partial_paid', 'sent', 'ordered' => 'badge-status badge-status-warning',
             'unpaid' => 'badge-status badge-status-danger',
@@ -254,6 +255,7 @@ if (!function_exists('status_label')) {
     {
         return match (strtolower(trim((string) $status))) {
             'draft' => 'Brouillon',
+            'pending' => 'En attente',
             'validated' => 'Validée',
             'partial_paid' => 'Partiellement payée',
             'unpaid' => 'Non réglée',
@@ -537,5 +539,23 @@ if (!function_exists('app_scope_description')) {
         }
 
         return 'Pilotage des ventes, services, facturation et stock.';
+    }
+}
+
+if (!function_exists('stock_pending_receptions_count')) {
+    function stock_pending_receptions_count(): int
+    {
+        if (!Auth::check()) {
+            return 0;
+        }
+
+        $shopId = current_user_shop_id();
+        $canManageCentral = user_can_access_stock_management() || user_is_admin();
+
+        try {
+            return (new \App\Models\StockTransfer())->pendingCountForReception($shopId, $canManageCentral);
+        } catch (\Throwable $throwable) {
+            return 0;
+        }
     }
 }

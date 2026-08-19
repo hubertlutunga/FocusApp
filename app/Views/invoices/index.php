@@ -39,7 +39,13 @@
                             <td class="text-end">
                                 <div class="table-actions">
                                     <a href="<?= e(url('/invoices/show?id=' . $invoice['id'])); ?>" class="btn btn-sm btn-outline-primary table-action-btn">Voir</a>
-                                    <a href="<?= e(url('/invoices/pdf?id=' . $invoice['id'])); ?>" target="_blank" class="btn btn-sm btn-outline-secondary table-action-btn">PDF</a>
+                                    <a
+                                        href="<?= e(url('/invoices/pdf?id=' . $invoice['id'])); ?>"
+                                        class="btn btn-sm btn-outline-secondary table-action-btn js-invoice-print"
+                                        data-pdf-url="<?= e(url('/invoices/pdf?id=' . $invoice['id'])); ?>"
+                                        data-pos-url="<?= e(url('/invoices/pos?id=' . $invoice['id'])); ?>">
+                                        Imprimer
+                                    </a>
                                 </div>
                             </td>
                         </tr>

@@ -3,6 +3,7 @@ $productCount = count($products);
 $totalStock = array_reduce($products, static fn (float $carry, array $product): float => $carry + (float) $product['current_stock'], 0.0);
 $lowStockCount = count(array_filter($products, static fn (array $product): bool => (float) $product['current_stock'] <= (float) $product['minimum_stock']));
 $isShopStock = $currentShopId !== null;
+$pendingReceptionCount = stock_pending_receptions_count();
 ?>
 
 <div class="page-hero">
@@ -11,6 +12,12 @@ $isShopStock = $currentShopId !== null;
         <p class="text-muted mb-0"><?= $isShopStock ? 'Stock disponible dans ' . e($currentShopName ?: 'votre boutique') . '.' : 'Consultez le stock central et transférez des produits vers les boutiques.'; ?></p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
+        <a href="<?= e(url('/stock/transfers')); ?>" class="btn btn-outline-secondary">
+            <i class="bi bi-bell me-1"></i> Réceptions
+            <?php if ($pendingReceptionCount > 0): ?>
+                <span class="badge text-bg-danger ms-1"><?= e((string) $pendingReceptionCount); ?></span>
+            <?php endif; ?>
+        </a>
         <?php if (!$isShopStock): ?>
             <a href="<?= e(url('/procurements')); ?>" class="btn btn-primary">
                 <i class="bi bi-cart-plus me-1"></i> Approvisionnement
@@ -253,7 +260,7 @@ $isShopStock = $currentShopId !== null;
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table table-striped align-middle js-datatable">
-                    <thead><tr><th>Produit</th><th>Mouvement</th><th>Quantité</th><th data-mobile-hidden="true">Date</th><th data-mobile-hidden="true">Agent</th></tr></thead>
+                    <thead><tr><th>Produit</th><th>Mouvement</th><th>Quantité</th><th>Statut</th><th data-mobile-hidden="true">Date</th><th data-mobile-hidden="true">Agent</th></tr></thead>
                     <tbody>
                         <?php foreach ($recentTransfers as $transfer): ?>
                             <?php $isReturn = ($transfer['transfer_type'] ?? 'to_shop') === 'to_central'; ?>
@@ -276,6 +283,7 @@ $isShopStock = $currentShopId !== null;
                                         <i class="bi bi-info-circle ms-1"></i>
                                     </span>
                                 </td>
+                                <td><span class="badge <?= e(status_badge_class($transfer['status'] ?? 'pending')); ?>"><?= e(status_label($transfer['status'] ?? 'pending')); ?></span></td>
                                 <td><?= e(date('d/m/Y H:i', strtotime((string) $transfer['created_at']))); ?></td>
                                 <td><?= e($transfer['user_name'] ?: '—'); ?></td>
                             </tr>

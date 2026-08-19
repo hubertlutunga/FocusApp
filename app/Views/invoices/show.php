@@ -16,7 +16,13 @@
     </div>
 
     <div class="document-toolbar mb-4">
-        <a href="<?= e(url('/invoices/pdf?id=' . $invoice['id'])); ?>" target="_blank" class="btn btn-outline-secondary">PDF</a>
+        <a
+            href="<?= e(url('/invoices/pdf?id=' . $invoice['id'])); ?>"
+            class="btn btn-outline-secondary js-invoice-print"
+            data-pdf-url="<?= e(url('/invoices/pdf?id=' . $invoice['id'])); ?>"
+            data-pos-url="<?= e(url('/invoices/pos?id=' . $invoice['id'])); ?>">
+            Imprimer
+        </a>
         <?php if ($invoice['status'] === 'draft'): ?>
             <form method="post" action="<?= e(url('/invoices/validate')); ?>">
                 <?= csrf_field(); ?>

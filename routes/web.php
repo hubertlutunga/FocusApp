@@ -96,6 +96,8 @@ $router->get('/stock', [StockController::class, 'index'], [StockManagerMiddlewar
 $router->post('/stock/adjust', [StockController::class, 'adjust'], [StockManagerMiddleware::class]);
 $router->post('/stock/transfer', [StockController::class, 'transfer'], [StockManagerMiddleware::class]);
 $router->post('/stock/return', [StockController::class, 'returnStock'], [StockManagerMiddleware::class]);
+$router->get('/stock/transfers', [StockController::class, 'transfers'], [AuthMiddleware::class]);
+$router->post('/stock/transfers/receive', [StockController::class, 'receiveTransfer'], [AuthMiddleware::class]);
 
 $router->get('/procurements', [ProcurementController::class, 'index'], [StockManagerMiddleware::class]);
 $router->get('/procurements/create', [ProcurementController::class, 'create'], [StockManagerMiddleware::class]);
@@ -123,6 +125,7 @@ $router->get('/invoices/show', [InvoiceController::class, 'show'], [CommercialMi
 $router->post('/invoices/validate', [InvoiceController::class, 'validate'], [CommercialMiddleware::class]);
 $router->post('/invoices/cancel', [InvoiceController::class, 'cancel'], [AdminMiddleware::class]);
 $router->get('/invoices/pdf', [InvoiceController::class, 'pdf'], [CommercialMiddleware::class]);
+$router->get('/invoices/pos', [InvoiceController::class, 'pos'], [CommercialMiddleware::class]);
 
 $router->get('/payments', [PaymentController::class, 'index'], [CommercialMiddleware::class]);
 $router->get('/payments/create', [PaymentController::class, 'create'], [CommercialMiddleware::class]);

@@ -104,7 +104,7 @@
                         <?php if (($dashboardShopSalesRows ?? []) === []): ?>
                             <div class="empty-state py-4"><i class="bi bi-receipt"></i><div>Aucune vente pour ce filtre.</div></div>
                         <?php else: ?>
-                            <div class="table-responsive">
+                            <div class="table-responsive dashboard-scroll-list">
                                 <table class="table table-striped align-middle mb-0">
                                     <thead><tr><th>Facture</th><th>Boutique</th><th class="text-end">Total</th></tr></thead>
                                     <tbody>
@@ -138,7 +138,7 @@
                         <?php if (($dashboardShopStockRows ?? []) === []): ?>
                             <div class="empty-state py-4"><i class="bi bi-box-seam"></i><div>Aucun stock disponible pour ce filtre.</div></div>
                         <?php else: ?>
-                            <div class="table-responsive">
+                            <div class="table-responsive dashboard-scroll-list">
                                 <table class="table table-striped align-middle mb-0">
                                     <thead><tr><th>Produit</th><th>Emplacement</th><th class="text-end">Stock</th><th class="text-end">Prix</th></tr></thead>
                                     <tbody>
@@ -292,7 +292,13 @@
                                             Encaisser
                                         </button>
                                     <?php endif; ?>
-                                    <a href="<?= e(url('/invoices/pdf?id=' . $invoice['id'])); ?>" target="_blank" class="btn btn-sm btn-outline-secondary table-action-btn">PDF</a>
+                                    <a
+                                        href="<?= e(url('/invoices/pdf?id=' . $invoice['id'])); ?>"
+                                        class="btn btn-sm btn-outline-secondary table-action-btn js-invoice-print"
+                                        data-pdf-url="<?= e(url('/invoices/pdf?id=' . $invoice['id'])); ?>"
+                                        data-pos-url="<?= e(url('/invoices/pos?id=' . $invoice['id'])); ?>">
+                                        Imprimer
+                                    </a>
                                 </div>
                             </td>
                         </tr>

@@ -22,12 +22,14 @@ $referencePaths = ['/clients', '/clients/create', '/clients/edit', '/suppliers',
 $stockPaths = ['/products', '/products/create', '/products/edit', '/services', '/services/create', '/services/edit', '/stock', '/procurements', '/procurements/create', '/procurements/show'];
 $commercialPaths = ['/quotes', '/quotes/create', '/quotes/show', '/invoices', '/invoices/create', '/invoices/show', '/payments', '/payments/create', '/products/catalog'];
 $pilotagePaths = ['/expenses', '/expenses/create', '/expenses/show', '/expenses/edit', '/reports'];
+$transferInboxPaths = ['/stock/transfers'];
 
 $adminOpen = $matchesGroup($adminPaths);
 $referenceOpen = $matchesGroup($referencePaths);
 $stockOpen = $matchesGroup($stockPaths);
 $commercialOpen = $matchesGroup($commercialPaths);
 $pilotageOpen = $matchesGroup($pilotagePaths);
+$pendingTransferCount = stock_pending_receptions_count();
 
 $isAdmin = user_is_admin();
 $canAccessCaisse = user_can_access_caisse();
@@ -45,6 +47,13 @@ $canAccessStock = user_can_access_stock_management();
 
     <nav class="nav flex-column sidebar-nav">
         <a class="nav-link <?= is_active_path(['/','/dashboard']); ?>" href="<?= e(url('/dashboard')); ?>"><i class="bi bi-grid-1x2-fill"></i><span>Tableau de bord</span></a>
+        <a class="nav-link <?= is_active_path($transferInboxPaths); ?>" href="<?= e(url('/stock/transfers')); ?>">
+            <i class="bi bi-bell-fill"></i>
+            <span>Réceptions stock</span>
+            <?php if ($pendingTransferCount > 0): ?>
+                <span class="badge text-bg-danger rounded-pill ms-auto"><?= e((string) $pendingTransferCount); ?></span>
+            <?php endif; ?>
+        </a>
 
         <?php if ($isAdmin): ?>
         <div class="sidebar-group">

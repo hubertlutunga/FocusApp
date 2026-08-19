@@ -122,6 +122,45 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.addEventListener('click', function (event) {
+        const printButton = event.target.closest('.js-invoice-print');
+        if (printButton) {
+            event.preventDefault();
+
+            const pdfUrl = printButton.dataset.pdfUrl || printButton.getAttribute('href');
+            const posUrl = printButton.dataset.posUrl || '';
+
+            if (!window.Swal) {
+                if (pdfUrl) {
+                    window.open(pdfUrl, '_blank', 'noopener');
+                }
+                return;
+            }
+
+            window.Swal.fire({
+                title: 'Impression facture',
+                text: 'Choisissez le format d\'impression.',
+                icon: 'question',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'PDF',
+                denyButtonText: 'POS 75mm',
+                cancelButtonText: 'Annuler',
+                confirmButtonColor: '#0d6efd',
+                denyButtonColor: '#198754'
+            }).then(function (result) {
+                if (result.isConfirmed && pdfUrl) {
+                    window.open(pdfUrl, '_blank', 'noopener');
+                    return;
+                }
+
+                if (result.isDenied && posUrl) {
+                    window.open(posUrl, '_blank', 'noopener');
+                }
+            });
+
+            return;
+        }
+
         const addButton = event.target.closest('.js-add-stock-row');
         if (addButton) {
             const form = addButton.closest('.stock-multi-form');

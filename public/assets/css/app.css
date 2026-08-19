@@ -1408,6 +1408,17 @@ body {
     color: #5b677a;
 }
 
+.dashboard-scroll-list {
+    max-height: 26rem;
+    overflow-y: auto;
+}
+
+@media (max-width: 991.98px) {
+    .dashboard-scroll-list {
+        max-height: 20rem;
+    }
+}
+
 .text-amount {
     font-variant-numeric: tabular-nums;
 }

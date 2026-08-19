@@ -307,8 +307,12 @@ CREATE TABLE stock_transfers (
     source_shop_id BIGINT UNSIGNED NULL,
     destination_shop_id BIGINT UNSIGNED NULL,
     transfer_type ENUM('to_shop', 'to_central') NOT NULL DEFAULT 'to_shop',
+    status ENUM('pending', 'received', 'cancelled') NOT NULL DEFAULT 'pending',
     quantity DECIMAL(18,2) NOT NULL,
     note TEXT NULL,
+    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    received_at DATETIME NULL,
+    received_by BIGINT UNSIGNED NULL,
     created_by BIGINT UNSIGNED NULL,
     deleted_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -316,6 +320,7 @@ CREATE TABLE stock_transfers (
     CONSTRAINT fk_stock_transfers_product FOREIGN KEY (product_id) REFERENCES products(id),
     CONSTRAINT fk_stock_transfers_source_shop FOREIGN KEY (source_shop_id) REFERENCES shops(id),
     CONSTRAINT fk_stock_transfers_destination_shop FOREIGN KEY (destination_shop_id) REFERENCES shops(id),
+    CONSTRAINT fk_stock_transfers_received_by FOREIGN KEY (received_by) REFERENCES users(id),
     CONSTRAINT fk_stock_transfers_user FOREIGN KEY (created_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 

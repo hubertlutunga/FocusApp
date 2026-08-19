@@ -119,8 +119,8 @@ final class StockController extends Controller
 
         try {
             $count = (new StockTransfer())->transferManyToShop($destinationShopId, $items, $note, Auth::id());
-            (new ActivityLog())->log('transfer', 'Transfert multi-produits vers boutique', 'stock', Auth::id());
-            Session::flash('alert', ['icon' => 'success', 'title' => 'Transfert effectué', 'text' => $count . ' produit(s) transféré(s) vers la boutique sélectionnée.']);
+            (new ActivityLog())->log('transfer_request', 'Demande de transfert multi-produits vers boutique', 'stock', Auth::id());
+            Session::flash('alert', ['icon' => 'success', 'title' => 'Transfert envoyé', 'text' => $count . ' produit(s) en attente de réception par la boutique.']);
         } catch (Throwable $throwable) {
             Session::flash('alert', ['icon' => 'error', 'title' => 'Transfert impossible', 'text' => $throwable->getMessage() ?: 'Impossible de transférer ce stock.']);
         }
@@ -148,13 +148,55 @@ final class StockController extends Controller
 
         try {
             $count = (new StockTransfer())->returnManyToCentral($shopId, $items, $note, Auth::id());
-            (new ActivityLog())->log('return', 'Retour multi-produits vers stock général', 'stock', Auth::id());
-            Session::flash('alert', ['icon' => 'success', 'title' => 'Retour enregistré', 'text' => $count . ' produit(s) retourné(s) au stock général.']);
+            (new ActivityLog())->log('return_request', 'Demande de retour multi-produits vers stock général', 'stock', Auth::id());
+            Session::flash('alert', ['icon' => 'success', 'title' => 'Retour envoyé', 'text' => $count . ' produit(s) en attente de réception au stock général.']);
         } catch (Throwable $throwable) {
             Session::flash('alert', ['icon' => 'error', 'title' => 'Retour impossible', 'text' => $throwable->getMessage() ?: 'Impossible de retourner ce stock.']);
         }
 
         $this->redirect('/stock');
+    }
+
+    public function transfers(): void
+    {
+        $shopId = $this->currentShopId();
+        $canManageCentral = user_can_access_stock_management() || user_is_admin();
+        $transferModel = new StockTransfer();
+
+        $this->render('stock.transfers', [
+            'pageTitle' => 'Réceptions de stock',
+            'pendingTransfers' => $transferModel->pendingForReception($shopId, $canManageCentral),
+            'recentTransfers' => $transferModel->recent($shopId),
+            'currentShopId' => $shopId,
+            'canManageCentral' => $canManageCentral,
+            'currentShopName' => (string) (Auth::user()['shop_name'] ?? ''),
+        ]);
+    }
+
+    public function receiveTransfer(): void
+    {
+        verify_csrf();
+
+        $transferId = (int) ($_POST['transfer_id'] ?? 0);
+        if ($transferId <= 0) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Action invalide', 'text' => 'Transfert introuvable.']);
+            $this->redirect('/stock/transfers');
+        }
+
+        try {
+            (new StockTransfer())->receivePending(
+                $transferId,
+                Auth::id(),
+                $this->currentShopId(),
+                user_can_access_stock_management() || user_is_admin()
+            );
+            (new ActivityLog())->log('receive_transfer', 'Réception du transfert de stock #' . $transferId, 'stock', Auth::id());
+            Session::flash('alert', ['icon' => 'success', 'title' => 'Réception validée', 'text' => 'Le transfert est maintenant effectif en stock.']);
+        } catch (Throwable $throwable) {
+            Session::flash('alert', ['icon' => 'error', 'title' => 'Réception impossible', 'text' => $throwable->getMessage() ?: 'Impossible de valider cette réception.']);
+        }
+
+        $this->redirect('/stock/transfers');
     }
 
     private function normalizeTransferItems(array $input): array
