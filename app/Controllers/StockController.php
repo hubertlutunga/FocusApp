@@ -167,6 +167,7 @@ final class StockController extends Controller
             'pageTitle' => 'Réceptions de stock',
             'pendingTransfers' => $transferModel->pendingForReception($shopId, $canManageCentral),
             'recentTransfers' => $transferModel->recent($shopId),
+            'products' => (new Product())->allForStock($shopId),
             'currentShopId' => $shopId,
             'canManageCentral' => $canManageCentral,
             'currentShopName' => (string) (Auth::user()['shop_name'] ?? ''),

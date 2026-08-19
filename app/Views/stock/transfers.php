@@ -18,6 +18,71 @@ $isShopUser = $currentShopId !== null;
     </div>
 </div>
 
+<?php if ($isShopUser): ?>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 pt-4 px-4">
+        <h3 class="h5 mb-1">Envoyer du stock au siège</h3>
+        <p class="text-muted mb-0">Sélectionnez un ou plusieurs produits de votre boutique pour les envoyer au stock général.</p>
+    </div>
+    <div class="card-body px-4 pb-4">
+        <form method="post" action="<?= e(url('/stock/return')); ?>" class="row g-3 align-items-end stock-multi-form" data-row-template="sendRowTemplate" data-row-container="sendRows">
+            <?= csrf_field(); ?>
+            <div class="col-12">
+                <label class="form-label" for="send_note">Note</label>
+                <input class="form-control" id="send_note" name="note" placeholder="Motif de l'envoi">
+            </div>
+            <div class="col-12">
+                <div class="stock-transfer-rows" id="sendRows">
+                    <div class="row g-2 align-items-end stock-transfer-row">
+                        <div class="col-md-7">
+                            <label class="form-label">Produit</label>
+                            <select class="form-select js-product-select js-select2" name="items[product_id][]" data-placeholder="Rechercher et sélectionner un produit" required>
+                                <option value="">Sélectionner</option>
+                                <?php foreach ($products as $product): ?>
+                                    <option value="<?= e((string) $product['id']); ?>"><?= e($product['name'] . ' (' . $product['sku'] . ') — Stock boutique : ' . number_format((float) $product['current_stock'], 2, ',', ' ')); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Quantité</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control" name="items[quantity][]" required>
+                        </div>
+                        <div class="col-md-2 d-grid">
+                            <button type="button" class="btn btn-outline-danger js-remove-stock-row" disabled>Retirer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 d-flex justify-content-between flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-primary js-add-stock-row">Ajouter un autre produit</button>
+                <button type="submit" class="btn btn-primary">Envoyer du stock</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<template id="sendRowTemplate">
+    <div class="row g-2 align-items-end stock-transfer-row mt-2">
+        <div class="col-md-7">
+            <label class="form-label">Produit</label>
+            <select class="form-select js-product-select js-select2" name="items[product_id][]" data-placeholder="Rechercher et sélectionner un produit" required>
+                <option value="">Sélectionner</option>
+                <?php foreach ($products as $product): ?>
+                    <option value="<?= e((string) $product['id']); ?>"><?= e($product['name'] . ' (' . $product['sku'] . ') — Stock boutique : ' . number_format((float) $product['current_stock'], 2, ',', ' ')); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Quantité</label>
+            <input type="number" step="0.01" min="0.01" class="form-control" name="items[quantity][]" required>
+        </div>
+        <div class="col-md-2 d-grid">
+            <button type="button" class="btn btn-outline-danger js-remove-stock-row">Retirer</button>
+        </div>
+    </div>
+</template>
+<?php endif; ?>
+
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
