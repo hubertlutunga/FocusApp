@@ -17,6 +17,7 @@ use App\Controllers\ReportController;
 use App\Controllers\ServiceController;
 use App\Controllers\ShopController;
 use App\Controllers\StockController;
+use App\Controllers\StarlinkSubscriptionController;
 use App\Controllers\SupplierController;
 use App\Controllers\UnitController;
 use App\Controllers\ActivityLogController;
@@ -140,6 +141,13 @@ $router->get('/expenses/edit', [ExpenseController::class, 'edit'], [CaisseMiddle
 $router->post('/expenses/update', [ExpenseController::class, 'update'], [CaisseMiddleware::class]);
 $router->post('/expenses/pay', [ExpenseController::class, 'pay'], [CaisseMiddleware::class]);
 $router->post('/expenses/delete', [ExpenseController::class, 'delete'], [AdminMiddleware::class]);
+
+$router->get('/starlink-subscriptions', [StarlinkSubscriptionController::class, 'index'], [CaisseMiddleware::class]);
+$router->get('/starlink-subscriptions/create', [StarlinkSubscriptionController::class, 'create'], [CaisseMiddleware::class]);
+$router->post('/starlink-subscriptions/store', [StarlinkSubscriptionController::class, 'store'], [CaisseMiddleware::class]);
+$router->get('/starlink-subscriptions/edit', [StarlinkSubscriptionController::class, 'edit'], [CaisseMiddleware::class]);
+$router->post('/starlink-subscriptions/update', [StarlinkSubscriptionController::class, 'update'], [CaisseMiddleware::class]);
+$router->post('/starlink-subscriptions/delete', [StarlinkSubscriptionController::class, 'delete'], [AdminMiddleware::class]);
 
 $router->get('/reports', [ReportController::class, 'index'], [CaisseMiddleware::class]);
 

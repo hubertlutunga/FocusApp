@@ -15,11 +15,11 @@ final class StockManagerMiddleware
             redirect('/login');
         }
 
-        if (!Auth::hasRole(['administrateur', 'gestionnaire_stock'])) {
+        if (!Auth::hasRole(['administrateur', 'gestionnaire_stock', 'caissier'])) {
             Session::flash('alert', [
                 'icon' => 'warning',
                 'title' => 'Accès refusé',
-                'text' => 'Cette rubrique est réservée au gestionnaire de stock.',
+                'text' => 'Cette rubrique est réservée au gestionnaire de stock et au profil caisse.',
             ]);
             redirect('/dashboard');
         }

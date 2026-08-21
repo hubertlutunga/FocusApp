@@ -167,6 +167,82 @@
     </div>
 </div>
 
+<?php if (!empty($starlinkOverview) || !empty($starlinkAlerts)): ?>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="h5 mb-1">Suivi abonnements Starlink</h3>
+            <p class="text-muted mb-0">Notifications automatiques avant échéance des abonnements clients.</p>
+        </div>
+        <a href="<?= e(url('/starlink-subscriptions')); ?>" class="btn btn-outline-primary">Voir tout</a>
+    </div>
+    <div class="card-body px-4 pb-4">
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <div class="metric-card h-100">
+                    <div class="card-body">
+                        <div class="muted-label">Total abonnements</div>
+                        <div class="h4 mb-0"><?= e((string) ($starlinkOverview['total_subscriptions'] ?? 0)); ?></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card h-100">
+                    <div class="card-body">
+                        <div class="muted-label">Actifs</div>
+                        <div class="h4 mb-0"><?= e((string) ($starlinkOverview['active_subscriptions'] ?? 0)); ?></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card h-100">
+                    <div class="card-body">
+                        <div class="muted-label">Échéance sous 7 jours</div>
+                        <div class="h4 mb-0 text-warning"><?= e((string) ($starlinkOverview['expiring_within_7_days'] ?? 0)); ?></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card h-100">
+                    <div class="card-body">
+                        <div class="muted-label">Déjà expirés</div>
+                        <div class="h4 mb-0 text-danger"><?= e((string) ($starlinkOverview['expired_active_subscriptions'] ?? 0)); ?></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <?php if (($starlinkAlerts ?? []) === []): ?>
+            <div class="empty-state py-4"><i class="bi bi-check2-circle"></i><div>Aucune échéance Starlink proche pour le moment.</div></div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle mb-0">
+                    <thead><tr><th>Client</th><th>Ligne</th><th>Échéance</th><th>Jours restants</th></tr></thead>
+                    <tbody>
+                        <?php foreach ($starlinkAlerts as $alert): ?>
+                            <?php $days = (int) ($alert['days_to_expiry'] ?? 0); ?>
+                            <tr>
+                                <td><?= e($alert['company_name']); ?></td>
+                                <td>
+                                    <div class="table-cell-stack">
+                                        <div class="table-cell-main"><?= e($alert['line_label']); ?></div>
+                                        <div class="table-cell-meta"><?= e($alert['subscription_number'] ?: 'Sans numéro'); ?></div>
+                                    </div>
+                                </td>
+                                <td><?= e(date('d/m/Y', strtotime((string) $alert['end_date']))); ?></td>
+                                <td class="<?= $days < 0 ? 'text-danger fw-semibold' : ($days <= 7 ? 'text-warning fw-semibold' : ''); ?>">
+                                    <?= $days < 0 ? 'Expiré (' . e((string) abs($days)) . ' j)' : e((string) $days) . ' j'; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if (!empty($isCashierDashboard)): ?>
 <div class="row g-3 mb-4">
     <div class="col-md-6 col-xl-3">

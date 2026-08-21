@@ -182,7 +182,7 @@ $isShopUser = $currentShopId !== null;
                                 </td>
                                 <td><?= e($isReturn ? 'Retour vers stock général' : 'Transfert vers boutique'); ?></td>
                                 <td><?= e(number_format((float) $transfer['quantity'], 2, ',', ' ')); ?></td>
-                                <td><span class="badge <?= e(status_badge_class($transfer['status'] ?? 'pending')); ?>"><?= e(status_label($transfer['status'] ?? 'pending')); ?></span></td>
+                                <td><span class="badge <?= e(status_badge_class($transfer['effective_status'] ?? $transfer['status'] ?? 'pending')); ?>"><?= e(status_label($transfer['effective_status'] ?? $transfer['status'] ?? 'pending')); ?></span></td>
                                 <td><?= e(date('d/m/Y H:i', strtotime((string) $transfer['created_at']))); ?></td>
                                 <td><?= e($transfer['received_by_name'] ?: '—'); ?></td>
                             </tr>

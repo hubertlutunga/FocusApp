@@ -283,7 +283,7 @@ $pendingReceptionCount = stock_pending_receptions_count();
                                         <i class="bi bi-info-circle ms-1"></i>
                                     </span>
                                 </td>
-                                <td><span class="badge <?= e(status_badge_class($transfer['status'] ?? 'pending')); ?>"><?= e(status_label($transfer['status'] ?? 'pending')); ?></span></td>
+                                <td><span class="badge <?= e(status_badge_class($transfer['effective_status'] ?? $transfer['status'] ?? 'pending')); ?>"><?= e(status_label($transfer['effective_status'] ?? $transfer['status'] ?? 'pending')); ?></span></td>
                                 <td><?= e(date('d/m/Y H:i', strtotime((string) $transfer['created_at']))); ?></td>
                                 <td><?= e($transfer['user_name'] ?: '—'); ?></td>
                             </tr>

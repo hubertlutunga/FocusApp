@@ -15,7 +15,17 @@ final class StockTransfer extends Model
                     ss.name AS source_shop_name,
                     ds.name AS destination_shop_name,
                     u.full_name AS user_name,
-                    ru.full_name AS received_by_name
+                    ru.full_name AS received_by_name,
+                    CASE
+                        WHEN st.status = \'pending\' AND EXISTS (
+                            SELECT 1
+                            FROM stock_movements sm
+                            WHERE sm.reference_id = st.id
+                              AND sm.reference_type IN (\'stock_transfer\', \'stock_return\')
+                              AND sm.movement_type IN (\'transfer_out\', \'transfer_in\')
+                        ) THEN \'received\'
+                        ELSE st.status
+                    END AS effective_status
                 FROM stock_transfers st
                 INNER JOIN products p ON p.id = st.product_id
                 LEFT JOIN shops ss ON ss.id = st.source_shop_id
@@ -50,7 +60,14 @@ final class StockTransfer extends Model
                 LEFT JOIN shops ds ON ds.id = st.destination_shop_id
                 LEFT JOIN users u ON u.id = st.created_by
                 WHERE st.deleted_at IS NULL
-                  AND st.status = :status';
+                                    AND st.status = :status
+                                    AND NOT EXISTS (
+                                            SELECT 1
+                                            FROM stock_movements sm
+                                            WHERE sm.reference_id = st.id
+                                                AND sm.reference_type IN (\'stock_transfer\', \'stock_return\')
+                                                AND sm.movement_type IN (\'transfer_out\', \'transfer_in\')
+                                    )';
         $params = ['status' => 'pending'];
 
         if ($shopId !== null) {
@@ -77,7 +94,14 @@ final class StockTransfer extends Model
         $sql = 'SELECT COUNT(*)
                 FROM stock_transfers st
                 WHERE st.deleted_at IS NULL
-                  AND st.status = :status';
+                                    AND st.status = :status
+                                    AND NOT EXISTS (
+                                            SELECT 1
+                                            FROM stock_movements sm
+                                            WHERE sm.reference_id = st.id
+                                                AND sm.reference_type IN (\'stock_transfer\', \'stock_return\')
+                                                AND sm.movement_type IN (\'transfer_out\', \'transfer_in\')
+                                    )';
         $params = ['status' => 'pending'];
 
         if ($shopId !== null) {

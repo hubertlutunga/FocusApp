@@ -12,6 +12,7 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Report;
 use App\Models\Shop;
+use App\Models\StarlinkSubscription;
 use App\Models\StockMovement;
 use PDOException;
 
@@ -77,6 +78,14 @@ final class DashboardController extends Controller
         $dashboardShopSalesRows = $this->shopSalesRows($dashboardShopFilter, $salesDateFrom, $salesDateTo);
         $dashboardShopStockRows = $this->shopStockRows($dashboardShopFilter);
         $dashboardShopLabel = $this->shopFilterLabel($dashboardShopFilter, $shopOptions);
+        $starlinkOverview = null;
+        $starlinkAlerts = [];
+
+        if (user_can_access_caisse() || user_is_admin()) {
+            $starlinkModel = new StarlinkSubscription();
+            $starlinkOverview = $starlinkModel->dashboardOverview();
+            $starlinkAlerts = $starlinkModel->dashboardAlerts(8);
+        }
 
         if ($isCashierDashboard) {
             $cashierOverview = $this->cashierOverview($dashboardShopFilter);
@@ -323,6 +332,8 @@ final class DashboardController extends Controller
             'dashboardShopOverview' => $dashboardShopOverview,
             'dashboardShopSalesRows' => $dashboardShopSalesRows,
             'dashboardShopStockRows' => $dashboardShopStockRows,
+            'starlinkOverview' => $starlinkOverview,
+            'starlinkAlerts' => $starlinkAlerts,
             'stats' => $stats,
             'adminOverview' => $adminOverview,
             'adminChartData' => $adminChartData,

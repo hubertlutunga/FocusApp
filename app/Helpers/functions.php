@@ -266,6 +266,7 @@ if (!function_exists('status_label')) {
             'converted' => 'Converti',
             'ordered' => 'Commandé',
             'received' => 'Reçu',
+                'expired' => 'Expiré',
             'active' => 'Actif',
             'inactive' => 'Inactif',
             default => ucfirst(str_replace('_', ' ', trim((string) $status))),
@@ -510,7 +511,7 @@ if (!function_exists('user_can_access_commercial')) {
 if (!function_exists('user_can_access_stock_management')) {
     function user_can_access_stock_management(): bool
     {
-        return user_has_role(['administrateur', 'gestionnaire_stock']);
+        return user_has_role(['administrateur', 'gestionnaire_stock', 'caissier']);
     }
 }
 
