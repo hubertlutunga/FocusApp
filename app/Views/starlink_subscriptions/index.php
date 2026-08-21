@@ -7,30 +7,26 @@
         <a href="<?= e(url('/starlink-subscriptions/create')); ?>" class="btn btn-primary">Nouvel abonnement</a>
     </div>
     <div class="card-body px-4 pb-4">
-        <div class="table-responsive">
-            <table class="table table-striped align-middle js-datatable">
-                <thead>
-                    <tr>
-                        <th>Client</th>
-                        <th>Ligne</th>
-                        <th data-mobile-hidden="true">Plan</th>
-                        <th>Échéance</th>
-                        <th>Statut</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ($subscriptions === []): ?>
+        <?php if ($subscriptions === []): ?>
+            <div class="empty-state">
+                <i class="bi bi-router"></i>
+                <div class="fw-semibold mb-1">Aucun abonnement enregistré</div>
+                <p class="mb-0">Ajoutez votre premier abonnement Starlink client.</p>
+            </div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle js-datatable">
+                    <thead>
                         <tr>
-                            <td colspan="6" class="p-0">
-                                <div class="empty-state">
-                                    <i class="bi bi-router"></i>
-                                    <div class="fw-semibold mb-1">Aucun abonnement enregistré</div>
-                                    <p class="mb-0">Ajoutez votre premier abonnement Starlink client.</p>
-                                </div>
-                            </td>
+                            <th>Client</th>
+                            <th>Ligne</th>
+                            <th data-mobile-hidden="true">Plan</th>
+                            <th>Échéance</th>
+                            <th>Statut</th>
+                            <th class="text-end">Actions</th>
                         </tr>
-                    <?php else: ?>
+                    </thead>
+                    <tbody>
                         <?php foreach ($subscriptions as $subscription): ?>
                             <?php
                             $days = (int) ($subscription['days_to_expiry'] ?? 0);
@@ -92,9 +88,9 @@
                                 </td>
                             </tr>
                         <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
